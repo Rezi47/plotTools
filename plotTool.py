@@ -308,13 +308,43 @@ def parse_arguments():
     # Parse known arguments first
     args = parser.parse_args()
 
+    # # If Plot Type is not provided, ask in interactive input
+    # if  args.plot_type:
+    #     plot_type = args.plot_type
+    # else:
+    #     plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight) (default is 'motion'): ")
+    #     if not plot_type:
+    #         plot_type = 'motion'        
+
+    
     # If Plot Type is not provided, ask in interactive input
     if  args.plot_type:
         plot_type = args.plot_type
     else:
-        plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight) (default is 'motion'): ")
+        root = tk.Tk()
+        plot_type = []
+        def set_plot_type(plot_value):
+            global plot_type
+            plot_type = plot_value
+            print(f"Plot type is now set to: {plot_type}")
+            root.quit()
+        root.title("Select Plot type")
+        button1 = tk.Button(root, text="motion", command=lambda: set_plot_type('motion'))
+        button1.pack(padx=10, pady=10)
+
+        button2 = tk.Button(root, text="flux", command=lambda: set_plot_type('flux'))
+        button2.pack(padx=10, pady=10)
+
+        button3 = tk.Button(root, text="force", command=lambda: set_plot_type('force'))
+        button3.pack(padx=10, pady=10)
+
+        button4 = tk.Button(root, text="interfaceHeight", command=lambda: set_plot_type('interfaceHeight'))
+        button4.pack(padx=10, pady=10)
+
+        root.mainloop()
+        
         if not plot_type:
-            plot_type = 'motion'        
+            plot_type = 'motion'  
 
     # If no files are provided, launch interactive file selection
     if  args.file_args:
