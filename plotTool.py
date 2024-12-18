@@ -6,6 +6,14 @@ import os
 import argparse
 import itertools
 from io import StringIO
+import tkinter as tk
+try:
+    from PyQt5.QtWidgets import QApplication, QFileDialog
+    pyqt_available = True
+except ImportError:
+    pyqt_available = False
+    import tkinter as tk
+    from tkinter import filedialog
 
 def extract_interfaceHeight_values(file_path):
     """
@@ -221,41 +229,121 @@ def dynamic_plot(files, labels, fig_type, x_min, x_max, save_plot=False, save_da
                 save_extracted_data(output_dir, label, figure_names[i], times, var)
             print(f"Data saved for {label} in {output_dir}")
 
+
+def interactive_file_selection_TK():
+    """
+    Open a file dialog to select files interactively and return the selected files with their corresponding shift and scale values.
+    """
+    root = tk.Tk()
+    root.withdraw()  # Hide the root window
+
+    # Ask for corresponding shift and scale values
+    file_data = []
+
+    while True:
+        # Open file dialog
+        file_paths = filedialog.askopenfilenames(title="Select Files", filetypes=[("All Files", "*.*")])
+
+        for file_path in file_paths:
+            parent_dir = os.path.abspath(os.path.dirname(file_path))
+            label = input(f"Enter label (default: {os.path.basename(parent_dir)}): ") or os.path.basename(parent_dir)
+            shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
+            scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
+
+            file_data.append((file_path, label, shift_value, scale_value))
+
+        more_cases = input("Do you want to add more cases? (yes/no, default is no): ").strip().lower() == 'yes'
+        if not more_cases:
+            break
+
+    return file_data
+
+def interactive_file_selection_QT():
+    """
+    Open a file dialog to select files interactively and return the selected files with their corresponding shift and scale values.
+    """
+    app = QApplication([])  # Required to initialize the Qt application
+    file_dialog = QFileDialog()  # Create a file dialog instance
+
+    # Set options for the file dialog
+    file_dialog.setFileMode(QFileDialog.ExistingFiles)  # Allow selecting multiple files
+    file_dialog.setNameFilter("All Files (*.*)")  # Filter for all files
+    file_dialog.setWindowTitle("Select Files")  # Set the dialog title
+
+    # Ask for corresponding shift and scale values
+    file_data = []
+
+    while True:
+        # Open file dialog
+        if file_dialog.exec_():
+            file_paths = file_dialog.selectedFiles()  # Return the selected file paths
+    
+        for file_path in file_paths:
+            parent_dir = os.path.abspath(os.path.dirname(file_path))
+            label = input(f"Enter label (default: {os.path.basename(parent_dir)}): ") or os.path.basename(parent_dir)
+            shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
+            scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
+
+            file_data.append((file_path, label, shift_value, scale_value))
+
+        more_cases = input("Do you want to add more cases? (yes/no, default is no): ").strip().lower() == 'yes'
+        if not more_cases:
+            break
+
+    return file_data
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process files with labels, shift values, and scale values.")
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name), -sh (shift, default: 0), -sc (scale, default: 1)"
                        )
     parser.add_argument('-plot_type', '-pt', type=str,
-                       help='Specify the type of plot (motion, flux, force, interfaceHeight) (default: motion)',
-                       default='motion'
-                       )                       
-    parser.add_argument('-save_plot', '-sp',action='store_true', help="Disable saving the plot (default: False)")
-    parser.add_argument('-save_data', '-sd',action='store_true', help="Disable saving the data (default: False)")
+                       help='Specify the type of plot (motion, flux, force, interfaceHeight) (default: motion)'
+                       )
+    parser.add_argument('-save_plot', '-sp', action='store_true', help="Disable saving the plot (default: False)")
+    parser.add_argument('-save_data', '-sd', action='store_true', help="Disable saving the data (default: False)")
     parser.add_argument('-x_min', type=float, help="Minimum x-axis value")
     parser.add_argument('-x_max', type=float, help="Maximum x-axis value")
-    
+
+    # Parse known arguments first
     args = parser.parse_args()
 
-    file_data = []
-    i = 0
-    while i < len(args.file_args):
-        file_path = args.file_args[i]
-        # Get the parent directory and the last part
-        parent_dir = os.path.abspath(os.path.dirname(file_path))
-        dir_name = os.path.basename(parent_dir)
-        label, shift_value, scale_value = f"{dir_name}", 0, 1.0
-        #label, shift_value, scale_value = f"Case_{len(file_data) + 1}", 0, 1.0
-        i += 1
+    # If Plot Type is not provided, ask in interactive input
+    if  args.plot_type:
+        plot_type = args.plot_type
+    else:
+        plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight) (default is 'motion'): ")
+        if not plot_type:
+            plot_type = 'motion'        
 
-        while i < len(args.file_args) and args.file_args[i].startswith('-'):
-            if args.file_args[i] == "-label": label = args.file_args[i + 1]; i += 2
-            elif args.file_args[i] == "-sh": shift_value = float(args.file_args[i + 1]); i += 2
-            elif args.file_args[i] == "-sc": scale_value = float(args.file_args[i + 1]); i += 2
-            else: break
+    # If no files are provided, launch interactive file selection
+    if  args.file_args:
+        # Use argparse for standard file input
+        file_data = []
+        i = 0
+        while i < len(args.file_args):
+            file_path = args.file_args[i]
+            parent_dir = os.path.abspath(os.path.dirname(file_path))
+            dir_name = os.path.basename(parent_dir)
+            label, shift_value, scale_value = f"{dir_name}", 0, 1.0
+            i += 1
 
-        file_data.append((file_path, label, shift_value, scale_value))
-    return file_data, args.save_plot, args.save_data, args.plot_type, args.x_min, args.x_max
+            while i < len(args.file_args) and args.file_args[i].startswith('-'):
+                if args.file_args[i] == "-label": label = args.file_args[i + 1]; i += 2
+                elif args.file_args[i] == "-sh": shift_value = float(args.file_args[i + 1]); i += 2
+                elif args.file_args[i] == "-sc": scale_value = float(args.file_args[i + 1]); i += 2
+                else: break
+
+            file_data.append((file_path, label, shift_value, scale_value))
+        
+    else:
+        if pyqt_available:
+            file_data = interactive_file_selection_QT()
+        else:
+            file_data = interactive_file_selection_TK()
+
+    return file_data, args.save_plot, args.save_data, plot_type, args.x_min, args.x_max
+
 
 if __name__ == "__main__":
     
@@ -266,7 +354,7 @@ if __name__ == "__main__":
 #    ]
       
     file_data, save_plot, save_data, plot_type, x_min, x_max = parse_arguments()
-    
+
     for file_info in file_data:
         print("File:", file_info[0])
         print("Label:", file_info[1])
@@ -275,6 +363,7 @@ if __name__ == "__main__":
         print()
     print(f"Save Plot: {save_plot}")
     print(f"Save Data: {save_data}")
+    print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
     print()
 
     files = [entry[0] for entry in file_data]    
