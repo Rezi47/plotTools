@@ -1,5 +1,5 @@
 # Data Plotting and Extraction Tool
-This Python script is designed to read, process, and visualize various types of simulation data from files. It supports extracting time-series data for multiple variables from a range of file formats and provides functionality for plotting the data and saving it as CSV files.
+This Python script is designed to read, process, and visualize simulation data from various file formats. It supports extracting time-series data for multiple variables, visualizing the data with flexible plotting options, and saving the extracted data as CSV files for further analysis. It works with OpenFOAM simulation results and other structured data files.
 
 ## Features
 - Data Extraction: The script can extract data such as motion, force, flux, and interface height from specific file formats (e.g., OpenFOAM simulation results).
@@ -18,14 +18,20 @@ This Python script is designed to read, process, and visualize various types of 
 - `matplotlib`: For plotting graphs.
 - `numpy`: For handling numerical operations and data manipulation.
 - `argparse`: For parsing command-line arguments.
-You can install the dependencies using pip:
+- `tkinter` or `PyQt5`: For interactive file selection.
 
+You can install the dependencies using pip:
 ```bash
 pip install matplotlib numpy
 ```
 
+If you wish to use interactive file dialogs, you'll need either `tkinter` or `PyQt5`. `tkinter` is bundled with Python, but you can install `PyQt5` separately:
+```bash
+pip install PyQt5
+```
+
 ### Modifying the controlDict for rigidBodyMotion Solver
-If you are using the rigidBodyMotion solver and want to enable motion features in the code, you need to add the following code to your controlDict file:
+If you are using the `rigidBodyMotion` solver and want to enable plot motion features in the code, you need to add the following code to your `controlDict` file:
 
 ```bash
 DebugSwitches
