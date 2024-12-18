@@ -113,13 +113,13 @@ def select_fig(file_path, fig_type):
         times, variable_data = extract_interfaceHeight_values(file_path)
         figures = [
     	    # figure Name, Dimension, shift_flags, scale_flags
-    	    ["Amplitude Gauge 1", r'$m$' , 1, 1],
-    	    ["Amplitude Gauge 2", r'$m$' , 1, 1],
-    	    ["Amplitude Gauge 3", r'$m$' , 1, 1],
-    	    ["Amplitude Gauge 4", r'$m$' , 1, 1],
-    	    ["Amplitude Gauge 5", r'$m$' , 1, 1],
-    	    ["Amplitude Gauge 6", r'$m$' , 1, 1],
-    	    ["Amplitude Gauge 7", r'$m$' , 1, 1]
+    	    ["Amplitude (Gauge 1)", r'$m$' , 1, 1],
+    	    ["Amplitude (Gauge 2)", r'$m$' , 1, 1],
+    	    ["Amplitude (Gauge 3)", r'$m$' , 1, 1],
+    	    ["Amplitude (Gauge 4)", r'$m$' , 1, 1],
+    	    ["Amplitude (Gauge 5)", r'$m$' , 1, 1],
+    	    ["Amplitude (Gauge 6)", r'$m$' , 1, 1],
+    	    ["Amplitude (Gauge 7)", r'$m$' , 1, 1]
         ]         
     else:
         raise ValueError(f"Unknown fig_type: {fig_type} Available fig_type: motion, flux, force, interfaceHeight")
