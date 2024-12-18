@@ -245,8 +245,8 @@ def interactive_file_selection_TK():
         file_paths = filedialog.askopenfilenames(title="Select Files", filetypes=[("All Files", "*.*")])
 
         for file_path in file_paths:
-            parent_dir = os.path.abspath(os.path.dirname(file_path))
-            label = input(f"Enter label (default: {os.path.basename(parent_dir)}): ") or os.path.basename(parent_dir)
+            dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
+            label = input(f"Enter label (default: {dir_name}): ") or dir_name
             shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
             scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
 
@@ -279,8 +279,8 @@ def interactive_file_selection_QT():
             file_paths = file_dialog.selectedFiles()  # Return the selected file paths
     
         for file_path in file_paths:
-            parent_dir = os.path.abspath(os.path.dirname(file_path))
-            label = input(f"Enter label (default: {os.path.basename(parent_dir)}): ") or os.path.basename(parent_dir)
+            dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
+            label = input(f"Enter label (default: {dir_name}): ") or dir_name
             shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
             scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
 
@@ -307,15 +307,6 @@ def parse_arguments():
 
     # Parse known arguments first
     args = parser.parse_args()
-
-    # # If Plot Type is not provided, ask in interactive input
-    # if  args.plot_type:
-    #     plot_type = args.plot_type
-    # else:
-    #     plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight) (default is 'motion'): ")
-    #     if not plot_type:
-    #         plot_type = 'motion'        
-
     
     # If Plot Type is not provided, ask in interactive input
     if  args.plot_type:
@@ -324,27 +315,29 @@ def parse_arguments():
         root = tk.Tk()
         plot_type = []
         def set_plot_type(plot_value):
-            global plot_type
+            nonlocal plot_type
             plot_type = plot_value
-            print(f"Plot type is now set to: {plot_type}")
             root.quit()
+            root.destroy()
+
         root.title("Select Plot type")
         button1 = tk.Button(root, text="motion", command=lambda: set_plot_type('motion'))
-        button1.pack(padx=10, pady=10)
+        button1.pack(padx=50, pady=10)
 
         button2 = tk.Button(root, text="flux", command=lambda: set_plot_type('flux'))
-        button2.pack(padx=10, pady=10)
+        button2.pack(padx=50, pady=10)
 
         button3 = tk.Button(root, text="force", command=lambda: set_plot_type('force'))
-        button3.pack(padx=10, pady=10)
+        button3.pack(padx=50, pady=10)
 
         button4 = tk.Button(root, text="interfaceHeight", command=lambda: set_plot_type('interfaceHeight'))
-        button4.pack(padx=10, pady=10)
-
+        button4.pack(padx=50, pady=10)
+        
         root.mainloop()
         
+        # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight) (default is 'motion'): ")
         if not plot_type:
-            plot_type = 'motion'  
+            plot_type = 'motion'
 
     # If no files are provided, launch interactive file selection
     if  args.file_args:
@@ -353,8 +346,7 @@ def parse_arguments():
         i = 0
         while i < len(args.file_args):
             file_path = args.file_args[i]
-            parent_dir = os.path.abspath(os.path.dirname(file_path))
-            dir_name = os.path.basename(parent_dir)
+            dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
             label, shift_value, scale_value = f"{dir_name}", 0, 1.0
             i += 1
 
@@ -386,11 +378,12 @@ if __name__ == "__main__":
     file_data, save_plot, save_data, plot_type, x_min, x_max = parse_arguments()
 
     for file_info in file_data:
-        print("File:", file_info[0])
+        print("File:", os.path.relpath(file_info[0]))
         print("Label:", file_info[1])
         print("Shift Value:", file_info[2])
         print("Scale Value:", file_info[3])
         print()
+    print(f"Plot type: {plot_type}")
     print(f"Save Plot: {save_plot}")
     print(f"Save Data: {save_data}")
     print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
