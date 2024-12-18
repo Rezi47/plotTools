@@ -228,8 +228,7 @@ def parse_arguments():
                        )
     parser.add_argument('-plot_type', '-pt', type=str,
                        help='Specify the type of plot (motion, flux, force, interfaceHeight) (default: motion)',
-                       default='motion',
-                       choices=['motion', 'flux', 'force', 'interfaceHeight']
+                       default='motion'
                        )                       
     parser.add_argument('-save_plot', '-sp',action='store_true', help="Disable saving the plot (default: False)")
     parser.add_argument('-save_data', '-sd',action='store_true', help="Disable saving the data (default: False)")
