@@ -71,7 +71,10 @@ def extract_motion_values(log_file_path):
     with open(log_file_path, 'r') as file:
         for line in file:
             if line.startswith("Time =") and previous_line.startswith("deltaT"):
-                time = float(line.split('=')[1].strip())
+                time_str = line.split('=')[1].strip()
+                if time_str.endswith("s"):  # Check if the string ends with "s"
+                    time_str = time_str[:-1]  # Remove the "s"
+                time = float(time_str)  # Convert the cleaned string to a float
                 times.append(time)            
             previous_line = line  # Update the previous line
 
