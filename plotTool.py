@@ -8,7 +8,7 @@ import itertools
 from io import StringIO
 import tkinter as tk
 try:
-    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, QDialog, QLabel, QLineEdit, QDesktopWidget
+    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox
 
     import sys
     pyqt_available = True
@@ -300,11 +300,19 @@ def interactive_plot_type_selection_TK():
 
 def interactive_plot_type_selection_QT():
     
-    plot_type = []
+    plot_type = None
+    save_plot = False
+    save_data = False
+    x_min = None
+    x_max = None
 
     def set_plot_type(plot_value):
-        nonlocal plot_type
+        nonlocal plot_type, save_plot, save_data, x_min, x_max
         plot_type = plot_value
+        save_plot = save_plot_checkbox.isChecked()
+        save_data = save_data_checkbox.isChecked()
+        x_min = float(x_min_input.text()) if x_min_input.text() else None
+        x_max = float(x_max_input.text()) if x_max_input.text() else None
         window.close()
 
     window = QWidget()
@@ -323,7 +331,22 @@ def interactive_plot_type_selection_QT():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
         layout.addWidget(button)
 
-    window.setLayout(layout)
+    # Add checkboxes for "Save Plot" and "Save Data"
+    save_plot_checkbox = QCheckBox("Save Plot")
+    save_data_checkbox = QCheckBox("Save Data")
+    layout.addWidget(save_plot_checkbox)
+    layout.addWidget(save_data_checkbox)
+
+    # Add input fields for "x min" and "x max"
+    x_min_label = QLabel("x min:")
+    x_min_input = QLineEdit()
+    x_max_label = QLabel("x max:")
+    x_max_input = QLineEdit()
+    layout.addWidget(x_min_label)
+    layout.addWidget(x_min_input)
+    layout.addWidget(x_max_label)
+    layout.addWidget(x_max_input)
+
 
     # Center the window on the screen
     screen_center = QDesktopWidget().availableGeometry().center()
@@ -331,12 +354,13 @@ def interactive_plot_type_selection_QT():
     window_rect.moveCenter(screen_center)
     window.move(window_rect.center())
 
+    window.setLayout(layout)
     window.show()
 
     # Execute the application
     app.exec_()
 
-    return plot_type
+    return plot_type, save_plot, save_data, x_min, x_max
 
 class InputDialog(QDialog):
     def __init__(self, dir_name, parent=None):
@@ -413,14 +437,19 @@ def parse_arguments():
 
     # Parse known arguments first
     args = parser.parse_args()
-    
+
+    save_plot = args.save_plot
+    save_data = args.save_data
+    x_min = args.x_min
+    x_max = args.x_max   
+
     # If Plot Type is not provided, ask in interactive input
     if  args.plot_type:
         plot_type = args.plot_type
     else:
         # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight): ")
         if pyqt_available:
-            plot_type = interactive_plot_type_selection_QT()
+            plot_type, save_plot, save_data, x_min, x_max = interactive_plot_type_selection_QT()
         else:
             plot_type = interactive_plot_type_selection_TK()
 
@@ -469,7 +498,7 @@ def parse_arguments():
             if not more_cases:
                 break
 
-    return file_data, args.save_plot, args.save_data, plot_type, args.x_min, args.x_max
+    return file_data, save_plot, save_data, plot_type, x_min, x_max
 
 
 if __name__ == "__main__":
