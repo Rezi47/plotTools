@@ -8,13 +8,16 @@ import itertools
 from io import StringIO
 import tkinter as tk
 try:
-    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton
+    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, QDialog, QLabel, QLineEdit, QDesktopWidget
+
     import sys
     pyqt_available = True
 except ImportError:
     pyqt_available = False
     import tkinter as tk
     from tkinter import filedialog
+
+app = QApplication(sys.argv)
 
 def extract_interfaceHeight_values(file_path):
     """
@@ -253,7 +256,6 @@ def interactive_file_selection_QT():
     """
     Open a file dialog to select files interactively and return the selected files with their corresponding shift and scale values.
     """
-    app = QApplication([])  # Required to initialize the Qt application
     file_dialog = QFileDialog()  # Create a file dialog instance
 
     # Set options for the file dialog
@@ -270,7 +272,7 @@ def interactive_file_selection_QT():
     
     return file_paths
 
-def interactive_motion_Type_selection_TK():
+def interactive_plot_type_selection_TK():
     root = tk.Tk()
     plot_type = []
     def set_plot_type(plot_value):
@@ -293,13 +295,11 @@ def interactive_motion_Type_selection_TK():
     button4.pack(padx=50, pady=10)
     
     root.mainloop()
-    
-    # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight): ")
-    
+   
     return plot_type
 
-def interactive_motion_Type_selection_QT():
-    app = QApplication(sys.argv)
+def interactive_plot_type_selection_QT():
+    
     plot_type = []
 
     def set_plot_type(plot_value):
@@ -324,12 +324,79 @@ def interactive_motion_Type_selection_QT():
         layout.addWidget(button)
 
     window.setLayout(layout)
+
+    # Center the window on the screen
+    screen_center = QDesktopWidget().availableGeometry().center()
+    window_rect = window.frameGeometry()
+    window_rect.moveCenter(screen_center)
+    window.move(window_rect.center())
+
     window.show()
 
     # Execute the application
     app.exec_()
 
     return plot_type
+
+class InputDialog(QDialog):
+    def __init__(self, dir_name, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Input Values")
+        self.dir_name = dir_name
+        self.result = None  # To store the input values
+        self.more_cases = False  # To indicate whether to add more cases
+
+        # Create layout
+        layout = QVBoxLayout()
+
+        # Label input
+        self.label_input = QLineEdit(self)
+        self.label_input.setText(dir_name)  # Default value
+        layout.addWidget(QLabel(f"Enter label (default: {dir_name}):"))
+        layout.addWidget(self.label_input)
+
+        # Shift value input
+        self.shift_input = QLineEdit(self)
+        self.shift_input.setText("0")  # Default value
+        layout.addWidget(QLabel("Enter shift value (default: 0):"))
+        layout.addWidget(self.shift_input)
+
+        # Scale value input
+        self.scale_input = QLineEdit(self)
+        self.scale_input.setText("1")  # Default value
+        layout.addWidget(QLabel("Enter scale value (default: 1):"))
+        layout.addWidget(self.scale_input)
+
+        # Submit and Add button
+        submit_add_button = QPushButton("Submit and Add", self)
+        submit_add_button.clicked.connect(self.submit_and_add)
+        layout.addWidget(submit_add_button)
+
+        # Submit and Finish button
+        submit_finish_button = QPushButton("Submit and Finish", self)
+        submit_finish_button.clicked.connect(self.submit_and_finish)
+        layout.addWidget(submit_finish_button)
+
+        self.setLayout(layout)
+
+    def submit_and_finish(self):
+        self.more_cases = False
+        self.accept_inputs()
+
+    def submit_and_add(self):
+        self.more_cases = True
+        self.accept_inputs()
+
+    def accept_inputs(self):
+        try:
+            label = self.label_input.text() or self.dir_name
+            shift_value = float(self.shift_input.text() or 0)
+            scale_value = float(self.scale_input.text() or 1)
+            self.result = {"label": label, "shift_value": shift_value, "scale_value": scale_value}
+            self.accept()  # Close the dialog with success
+        except ValueError:
+            # Handle invalid input cases (optional)
+            pass
     
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process files with labels, shift values, and scale values.")
@@ -351,10 +418,11 @@ def parse_arguments():
     if  args.plot_type:
         plot_type = args.plot_type
     else:
+        # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight): ")
         if pyqt_available:
-            plot_type = interactive_motion_Type_selection_QT()
+            plot_type = interactive_plot_type_selection_QT()
         else:
-            plot_type = interactive_motion_Type_selection_TK()
+            plot_type = interactive_plot_type_selection_TK()
 
     # If no files are provided, launch interactive file selection
     if  args.file_args:
@@ -376,22 +444,28 @@ def parse_arguments():
             file_data.append((file_path, label, shift_value, scale_value))
         
     else:
+        file_data = []
         while True:
             # Open file dialog
             if pyqt_available:
                 file_paths = interactive_file_selection_QT()
             else:
                 file_paths = interactive_file_selection_TK()
-            file_data = []
+            
             for file_path in file_paths:
                 dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
-                label = input(f"Enter label (default: {dir_name}): ") or dir_name
-                shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
-                scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
-
+ #               label = input(f"Enter label (default: {dir_name}): ") or dir_name
+ #               shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
+ #               scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
+                dialog = InputDialog(dir_name)
+                if dialog.exec_():  # If the user submits the dialog
+                    label = dialog.result["label"]
+                    shift_value = dialog.result["shift_value"]
+                    scale_value = dialog.result["scale_value"]
                 file_data.append((file_path, label, shift_value, scale_value))
 
-            more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() == 'yes'
+            more_cases = dialog.more_cases
+#           more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() in ['yes', 'y']
             if not more_cases:
                 break
 
