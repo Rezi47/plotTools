@@ -8,7 +8,8 @@ import itertools
 from io import StringIO
 import tkinter as tk
 try:
-    from PyQt5.QtWidgets import QApplication, QFileDialog
+    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton
+    import sys
     pyqt_available = True
 except ImportError:
     pyqt_available = False
@@ -255,7 +256,7 @@ def interactive_file_selection_TK():
 
             file_data.append((file_path, label, shift_value, scale_value))
 
-        more_cases = input("Do you want to add more cases? (yes/no, default is no): ").strip().lower() == 'yes'
+        more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() == 'yes'
         if not more_cases:
             break
 
@@ -289,19 +290,80 @@ def interactive_file_selection_QT():
 
             file_data.append((file_path, label, shift_value, scale_value))
 
-        more_cases = input("Do you want to add more cases? (yes/no, default is no): ").strip().lower() == 'yes'
+        more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() == 'yes'
         if not more_cases:
             break
 
     return file_data
 
+def interactive_motion_Type_selection_TK():
+    root = tk.Tk()
+    plot_type = []
+    def set_plot_type(plot_value):
+        nonlocal plot_type
+        plot_type = plot_value
+        root.quit()
+        root.destroy()
+
+    root.title("Select Plot type")
+    button1 = tk.Button(root, text="motion", command=lambda: set_plot_type('motion'))
+    button1.pack(padx=50, pady=10)
+
+    button2 = tk.Button(root, text="flux", command=lambda: set_plot_type('flux'))
+    button2.pack(padx=50, pady=10)
+
+    button3 = tk.Button(root, text="force", command=lambda: set_plot_type('force'))
+    button3.pack(padx=50, pady=10)
+
+    button4 = tk.Button(root, text="interfaceHeight", command=lambda: set_plot_type('interfaceHeight'))
+    button4.pack(padx=50, pady=10)
+    
+    root.mainloop()
+    
+    # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight): ")
+    
+    return plot_type
+
+def interactive_motion_Type_selection_QT():
+    app = QApplication(sys.argv)
+    plot_type = []
+
+    def set_plot_type(plot_value):
+        nonlocal plot_type
+        plot_type = plot_value
+        window.close()
+
+    window = QWidget()
+    window.setWindowTitle("Select Plot Type")
+    layout = QVBoxLayout()
+
+    # Buttons for each plot type
+    buttons = {
+        "motion": QPushButton("motion"),
+        "flux": QPushButton("flux"),
+        "force": QPushButton("force"),
+        "interfaceHeight": QPushButton("interfaceHeight")
+    }
+
+    for plot_value, button in buttons.items():
+        button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
+        layout.addWidget(button)
+
+    window.setLayout(layout)
+    window.show()
+
+    # Execute the application
+    app.exec_()
+
+    return plot_type
+    
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process files with labels, shift values, and scale values.")
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name), -sh (shift, default: 0), -sc (scale, default: 1)"
                        )
     parser.add_argument('-plot_type', '-pt', type=str,
-                       help='Specify the type of plot (motion, flux, force, interfaceHeight) (default: motion)'
+                       help='Specify the type of plot (motion, flux, force, interfaceHeight)'
                        )
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Disable saving the plot (default: False)")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Disable saving the data (default: False)")
@@ -315,32 +377,10 @@ def parse_arguments():
     if  args.plot_type:
         plot_type = args.plot_type
     else:
-        root = tk.Tk()
-        plot_type = []
-        def set_plot_type(plot_value):
-            nonlocal plot_type
-            plot_type = plot_value
-            root.quit()
-            root.destroy()
-
-        root.title("Select Plot type")
-        button1 = tk.Button(root, text="motion", command=lambda: set_plot_type('motion'))
-        button1.pack(padx=50, pady=10)
-
-        button2 = tk.Button(root, text="flux", command=lambda: set_plot_type('flux'))
-        button2.pack(padx=50, pady=10)
-
-        button3 = tk.Button(root, text="force", command=lambda: set_plot_type('force'))
-        button3.pack(padx=50, pady=10)
-
-        button4 = tk.Button(root, text="interfaceHeight", command=lambda: set_plot_type('interfaceHeight'))
-        button4.pack(padx=50, pady=10)
-        
-        root.mainloop()
-        
-        # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight) (default is 'motion'): ")
-        if not plot_type:
-            plot_type = 'motion'
+        if pyqt_available:
+            file_data = interactive_motion_Type_selection_QT()
+        else:
+            file_data = interactive_motion_Type_selection_TK()
 
     # If no files are provided, launch interactive file selection
     if  args.file_args:
