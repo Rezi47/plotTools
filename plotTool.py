@@ -8,8 +8,8 @@ import itertools
 from io import StringIO
 import tkinter as tk
 try:
-    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox
-
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, QFrame
     import sys
     pyqt_available = True
 except ImportError:
@@ -316,8 +316,14 @@ def interactive_plot_type_selection_QT():
         window.close()
 
     window = QWidget()
-    window.setWindowTitle("Select Plot Type")
+    window.setWindowTitle("Plot Setting")
     layout = QVBoxLayout()
+
+    # Add a title before the buttons
+    title_label = QLabel("Select the Plot Type")
+    title_label.setAlignment(Qt.AlignCenter)
+    title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
+    layout.addWidget(title_label)
 
     # Buttons for each plot type
     buttons = {
@@ -331,21 +337,43 @@ def interactive_plot_type_selection_QT():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
         layout.addWidget(button)
 
-    # Add checkboxes for "Save Plot" and "Save Data"
+    # Add the first horizontal line separator
+    line1 = QFrame()
+    line1.setFrameShape(QFrame.HLine)
+    line1.setFrameShadow(QFrame.Sunken)
+    layout.addWidget(line1)
+
+    # Add checkboxes for "Save Plot" and "Save Data" in the same row
+    save_layout = QHBoxLayout()
     save_plot_checkbox = QCheckBox("Save Plot")
     save_data_checkbox = QCheckBox("Save Data")
-    layout.addWidget(save_plot_checkbox)
-    layout.addWidget(save_data_checkbox)
 
-    # Add input fields for "x min" and "x max"
+    save_layout.addWidget(save_plot_checkbox)
+    save_layout.addWidget(save_data_checkbox)
+    layout.addLayout(save_layout)
+
+    # Add the second horizontal line separator
+    line2 = QFrame()
+    line2.setFrameShape(QFrame.HLine)
+    line2.setFrameShadow(QFrame.Sunken)
+    layout.addWidget(line2)
+
+    # Add input fields for "x min" and "x max" in the same row
+    x_layout = QHBoxLayout()
     x_min_label = QLabel("x min:")
     x_min_input = QLineEdit()
     x_max_label = QLabel("x max:")
     x_max_input = QLineEdit()
-    layout.addWidget(x_min_label)
-    layout.addWidget(x_min_input)
-    layout.addWidget(x_max_label)
-    layout.addWidget(x_max_input)
+
+     # Set fixed width for input boxes
+    x_min_input.setFixedWidth(50)
+    x_max_input.setFixedWidth(50)
+
+    x_layout.addWidget(x_min_label)
+    x_layout.addWidget(x_min_input)
+    x_layout.addWidget(x_max_label)
+    x_layout.addWidget(x_max_input)
+    layout.addLayout(x_layout)
 
 
     # Center the window on the screen
@@ -376,19 +404,19 @@ class InputDialog(QDialog):
         # Label input
         self.label_input = QLineEdit(self)
         self.label_input.setText(dir_name)  # Default value
-        layout.addWidget(QLabel(f"Enter label (default: {dir_name}):"))
+        layout.addWidget(QLabel(f"Enter label:"))
         layout.addWidget(self.label_input)
 
         # Shift value input
         self.shift_input = QLineEdit(self)
         self.shift_input.setText("0")  # Default value
-        layout.addWidget(QLabel("Enter shift value (default: 0):"))
+        layout.addWidget(QLabel("Enter shift value:"))
         layout.addWidget(self.shift_input)
 
         # Scale value input
         self.scale_input = QLineEdit(self)
         self.scale_input.setText("1")  # Default value
-        layout.addWidget(QLabel("Enter scale value (default: 1):"))
+        layout.addWidget(QLabel("Enter scale value:"))
         layout.addWidget(self.scale_input)
 
         # Submit and Add button
