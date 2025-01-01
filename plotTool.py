@@ -242,25 +242,12 @@ def interactive_file_selection_TK():
     root.withdraw()  # Hide the root window
 
     # Ask for corresponding shift and scale values
-    file_data = []
+    file_paths = []
 
-    while True:
-        # Open file dialog
-        file_paths = filedialog.askopenfilenames(title="Select Files", filetypes=[("All Files", "*.*")])
+    # Open file dialog
+    file_paths = filedialog.askopenfilenames(title="Select Files", filetypes=[("All Files", "*.*")])
 
-        for file_path in file_paths:
-            dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
-            label = input(f"Enter label (default: {dir_name}): ") or dir_name
-            shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
-            scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
-
-            file_data.append((file_path, label, shift_value, scale_value))
-
-        more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() == 'yes'
-        if not more_cases:
-            break
-
-    return file_data
+    return file_paths
 
 def interactive_file_selection_QT():
     """
@@ -275,26 +262,13 @@ def interactive_file_selection_QT():
     file_dialog.setWindowTitle("Select Files")  # Set the dialog title
 
     # Ask for corresponding shift and scale values
-    file_data = []
+    file_paths = []
 
-    while True:
-        # Open file dialog
-        if file_dialog.exec_():
-            file_paths = file_dialog.selectedFiles()  # Return the selected file paths
+    # Open file dialog
+    if file_dialog.exec_():
+        file_paths = file_dialog.selectedFiles()  # Return the selected file paths
     
-        for file_path in file_paths:
-            dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
-            label = input(f"Enter label (default: {dir_name}): ") or dir_name
-            shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
-            scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
-
-            file_data.append((file_path, label, shift_value, scale_value))
-
-        more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() == 'yes'
-        if not more_cases:
-            break
-
-    return file_data
+    return file_paths
 
 def interactive_motion_Type_selection_TK():
     root = tk.Tk()
@@ -378,9 +352,9 @@ def parse_arguments():
         plot_type = args.plot_type
     else:
         if pyqt_available:
-            file_data = interactive_motion_Type_selection_QT()
+            plot_type = interactive_motion_Type_selection_QT()
         else:
-            file_data = interactive_motion_Type_selection_TK()
+            plot_type = interactive_motion_Type_selection_TK()
 
     # If no files are provided, launch interactive file selection
     if  args.file_args:
@@ -402,10 +376,24 @@ def parse_arguments():
             file_data.append((file_path, label, shift_value, scale_value))
         
     else:
-        if pyqt_available:
-            file_data = interactive_file_selection_QT()
-        else:
-            file_data = interactive_file_selection_TK()
+        while True:
+            # Open file dialog
+            if pyqt_available:
+                file_paths = interactive_file_selection_QT()
+            else:
+                file_paths = interactive_file_selection_TK()
+            file_data = []
+            for file_path in file_paths:
+                dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
+                label = input(f"Enter label (default: {dir_name}): ") or dir_name
+                shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
+                scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
+
+                file_data.append((file_path, label, shift_value, scale_value))
+
+            more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() == 'yes'
+            if not more_cases:
+                break
 
     return file_data, args.save_plot, args.save_data, plot_type, args.x_min, args.x_max
 
