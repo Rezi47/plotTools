@@ -8,9 +8,10 @@ import itertools
 from io import StringIO
 import tkinter as tk
 try:
-    from PyQt5.QtCore import Qt
-    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, QFrame
+    from PyQt5.QtCore import Qt, pyqtSignal
+    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, QFrame, QTextEdit
     import sys
+    import os
     pyqt_available = True
 except ImportError:
     pyqt_available = False
@@ -305,7 +306,7 @@ def interactive_plot_type_selection_QT():
     save_data = False
     x_min = None
     x_max = None
-
+      
     def set_plot_type(plot_value):
         nonlocal plot_type, save_plot, save_data, x_min, x_max
         plot_type = plot_value
@@ -365,7 +366,7 @@ def interactive_plot_type_selection_QT():
     x_max_label = QLabel("x max:")
     x_max_input = QLineEdit()
 
-     # Set fixed width for input boxes
+    # Set fixed width for input boxes
     x_min_input.setFixedWidth(50)
     x_max_input.setFixedWidth(50)
 
@@ -375,6 +376,32 @@ def interactive_plot_type_selection_QT():
     x_layout.addWidget(x_max_input)
     layout.addLayout(x_layout)
 
+ # Add the third horizontal line separator
+    line3 = QFrame()
+    line3.setFrameShape(QFrame.HLine)
+    line3.setFrameShadow(QFrame.Sunken)
+    layout.addWidget(line3)
+
+    # Integrate FileSelectorApp
+    file_selector = FileSelectorApp()
+
+    # Global variable to store the file paths
+    file_data = []
+
+    # Callback to process file paths when updated
+    def update_file_paths(file_paths):
+        nonlocal file_data  # Use nonlocal to modify the variable
+        file_data = file_paths
+        print("Updated File Paths:", file_data)  # Process file paths here
+
+    # Connect the signal to the callback function
+    file_selector.files_data_updated.connect(update_file_paths)
+    layout.addWidget(file_selector)
+
+    # Set the layout and show the window
+    window.setLayout(layout)
+    window.resize(400, 300)
+    window.show()
 
     # Center the window on the screen
     screen_center = QDesktopWidget().availableGeometry().center()
@@ -388,7 +415,88 @@ def interactive_plot_type_selection_QT():
     # Execute the application
     app.exec_()
 
-    return plot_type, save_plot, save_data, x_min, x_max
+    return plot_type, save_plot, save_data, x_min, x_max, file_data
+
+class FileSelectorApp(QWidget):
+    files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle("File Selector")
+        self.layout = QVBoxLayout()
+        self.file_data = []  # List to store file data (path, label, shift, scale)
+
+        # Add the initial file row
+        self.add_file_row()
+
+        self.setLayout(self.layout)
+
+    def add_file_row(self):
+        # Create a new row layout
+        file_row_layout = QHBoxLayout()
+
+        # Create "Browse" button and file path display
+        browse_button = QPushButton("Browse")
+        file_path_box = QLineEdit()
+        file_path_box.setReadOnly(True)
+
+        # Label input field
+        label_input = QLineEdit()
+        label_input.setPlaceholderText("Enter label")
+
+        # Shift value input field
+        shift_input = QLineEdit()
+        shift_input.setPlaceholderText("0")
+
+        # Scale value input field
+        scale_input = QLineEdit()
+        scale_input.setPlaceholderText("1")
+
+        # Connect "Browse" button to file selection logic
+        browse_button.clicked.connect(
+            lambda: self.select_file(browse_button, file_path_box, label_input, shift_input, scale_input)
+        )
+
+        # Add widgets to the row layout
+        file_row_layout.addWidget(browse_button)
+        file_row_layout.addWidget(file_path_box)
+        file_row_layout.addWidget(QLabel("Label:"))
+        file_row_layout.addWidget(label_input)
+        file_row_layout.addWidget(QLabel("Shift:"))
+        file_row_layout.addWidget(shift_input)
+        file_row_layout.addWidget(QLabel("Scale:"))
+        file_row_layout.addWidget(scale_input)
+
+        # Add the row layout to the main layout
+        self.layout.addLayout(file_row_layout)
+
+    def select_file(self, browse_button, file_path_box, label_input, shift_input, scale_input):
+        # Open file dialog
+        file_dialog = QFileDialog()
+        file_path, _ = file_dialog.getOpenFileName(self, "Select File")
+        if file_path:
+            # Extract and display only the last part of the file path
+            file_name = os.path.basename(file_path)
+            dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
+            file_path_box.setText(file_name)
+
+            # Get the corresponding label, shift, and scale values
+            label_input.setPlaceholderText(dir_name)
+            label = label_input.text() or dir_name  # Default to file name if label is empty
+            shift_value = float(shift_input.text() or 0)  # Default shift to 0
+            scale_value = float(scale_input.text() or 1)  # Default scale to 1
+
+            # Append the file data (path, label, shift, scale) to the list
+            self.file_data.append((file_path, label, shift_value, scale_value))
+
+            # Emit the updated file data
+            self.files_data_updated.emit(self.file_data)
+
+            # Automatically add a new row after the user selects a file
+            self.add_file_row()
 
 class InputDialog(QDialog):
     def __init__(self, dir_name, parent=None):
@@ -471,18 +579,10 @@ def parse_arguments():
     x_min = args.x_min
     x_max = args.x_max   
 
-    # If Plot Type is not provided, ask in interactive input
-    if  args.plot_type:
+    # If Plot Type and no file are not provided, ask in interactive input
+    if  args.plot_type and args.file_args:
         plot_type = args.plot_type
-    else:
-        # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight): ")
-        if pyqt_available:
-            plot_type, save_plot, save_data, x_min, x_max = interactive_plot_type_selection_QT()
-        else:
-            plot_type = interactive_plot_type_selection_TK()
 
-    # If no files are provided, launch interactive file selection
-    if  args.file_args:
         # Use argparse for standard file input
         file_data = []
         i = 0
@@ -499,34 +599,43 @@ def parse_arguments():
                 else: break
 
             file_data.append((file_path, label, shift_value, scale_value))
-        
     else:
-        file_data = []
-        while True:
-            # Open file dialog
-            if pyqt_available:
-                file_paths = interactive_file_selection_QT()
-            else:
-                file_paths = interactive_file_selection_TK()
+        # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight): ")
+        if pyqt_available:
+
+            plot_type, save_plot, save_data, x_min, x_max, file_data = interactive_plot_type_selection_QT()
+
+        else:
+            plot_type = interactive_plot_type_selection_TK()
+
+       
+#     else:
+#         file_data = []
+#         while True:
+#             # Open file dialog
+#             if pyqt_available:
+#                 file_paths = interactive_file_selection_QT()
+#             else:
+#                 file_paths = interactive_file_selection_TK()
             
-            for file_path in file_paths:
-                dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
- #               label = input(f"Enter label (default: {dir_name}): ") or dir_name
- #               shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
- #               scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
-                dialog = InputDialog(dir_name)
-                if dialog.exec_():  # If the user submits the dialog
-                    label = dialog.result["label"]
-                    shift_value = dialog.result["shift_value"]
-                    scale_value = dialog.result["scale_value"]
-                file_data.append((file_path, label, shift_value, scale_value))
+#             for file_path in file_paths:
+#                 dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
+#  #               label = input(f"Enter label (default: {dir_name}): ") or dir_name
+#  #               shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
+#  #               scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
+#                 dialog = InputDialog(dir_name)
+#                 if dialog.exec_():  # If the user submits the dialog
+#                     label = dialog.result["label"]
+#                     shift_value = dialog.result["shift_value"]
+#                     scale_value = dialog.result["scale_value"]
+#                 file_data.append((file_path, label, shift_value, scale_value))
 
-            more_cases = dialog.more_cases
-#           more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() in ['yes', 'y']
-            if not more_cases:
-                break
+#             more_cases = dialog.more_cases
+# #           more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() in ['yes', 'y']
+#             if not more_cases:
+#                 break
 
-    return file_data, save_plot, save_data, plot_type, x_min, x_max
+    return plot_type, save_plot, save_data, x_min, x_max, file_data
 
 
 if __name__ == "__main__":
@@ -537,7 +646,7 @@ if __name__ == "__main__":
 #         ["./BodyFitted/log.interFoam","BodyFitted", 0, 1]      
 #    ]
       
-    file_data, save_plot, save_data, plot_type, x_min, x_max = parse_arguments()
+    plot_type, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
 
     for file_info in file_data:
         print("File:", os.path.relpath(file_info[0]))
