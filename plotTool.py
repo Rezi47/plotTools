@@ -285,16 +285,35 @@ def interactive_plot_type_selection_QT():
     save_data = False
     x_min = None
     x_max = None
-      
-    def set_plot_type(plot_value):
+    file_data = []
+
+    def update_values():
         nonlocal plot_type, save_plot, save_data, x_min, x_max
-        plot_type = plot_value
+        # Update the current values from the UI elements
         save_plot = save_plot_checkbox.isChecked()
         save_data = save_data_checkbox.isChecked()
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
+
+    def set_plot_type(plot_value):
+        nonlocal plot_type
+        plot_type = plot_value
+        update_values()  # Capture the latest values when plot type is selected
+
+        # Change the style of the selected button to indicate it's selected
+        for button in plot_buttons.values():
+            button.setStyleSheet('background-color: none')  # Reset all buttons
+        plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
+
+    def plot_button_clicked():
+        # Update values before closing the window
+        update_values()
         window.close()
 
+    def update_file_paths(file_paths):
+        nonlocal file_data  # Use nonlocal to modify the variable
+        file_data = file_paths
+        
     window = QWidget()
     window.setWindowTitle("Plot Setting")
     layout = QVBoxLayout()
@@ -305,15 +324,15 @@ def interactive_plot_type_selection_QT():
     title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
     layout.addWidget(title_label)
 
-    # Buttons for each plot type
-    buttons = {
+    # Buttons for each plot type with toggling functionality
+    plot_buttons = {
         "motion": QPushButton("motion"),
         "flux": QPushButton("flux"),
         "force": QPushButton("force"),
         "interfaceHeight": QPushButton("interfaceHeight")
     }
 
-    for plot_value, button in buttons.items():
+    for plot_value, button in plot_buttons.items():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
         layout.addWidget(button)
 
@@ -327,7 +346,6 @@ def interactive_plot_type_selection_QT():
     save_layout = QHBoxLayout()
     save_plot_checkbox = QCheckBox("Save Plot")
     save_data_checkbox = QCheckBox("Save Data")
-
     save_layout.addWidget(save_plot_checkbox)
     save_layout.addWidget(save_data_checkbox)
     layout.addLayout(save_layout)
@@ -355,26 +373,21 @@ def interactive_plot_type_selection_QT():
     x_layout.addWidget(x_max_input)
     layout.addLayout(x_layout)
 
- # Add the third horizontal line separator
+    # Add the third horizontal line separator
     line3 = QFrame()
     line3.setFrameShape(QFrame.HLine)
     line3.setFrameShadow(QFrame.Sunken)
     layout.addWidget(line3)
 
-    # Integrate FileSelectorApp
+    # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
-
-    # Global variable to store the file paths
-    file_data = []
-
-    # Callback to process file paths when updated
-    def update_file_paths(file_paths):
-        nonlocal file_data  # Use nonlocal to modify the variable
-        file_data = file_paths
-        
-    # Connect the signal to the callback function
     file_selector.files_data_updated.connect(update_file_paths)
     layout.addWidget(file_selector)
+
+    # Add the final "Plot" button to execute selection
+    plot_button = QPushButton("Plot")
+    plot_button.clicked.connect(plot_button_clicked)
+    layout.addWidget(plot_button)
 
     # Set the layout and show the window
     window.setLayout(layout)
@@ -386,9 +399,6 @@ def interactive_plot_type_selection_QT():
     window_rect = window.frameGeometry()
     window_rect.moveCenter(screen_center)
     window.move(window_rect.center())
-
-    window.setLayout(layout)
-    window.show()
 
     # Execute the application
     app.exec_()
