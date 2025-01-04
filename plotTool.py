@@ -13,6 +13,7 @@ try:
     import sys
     import os
     pyqt_available = True
+    from functools import partial
 except ImportError:
     pyqt_available = False
     import tkinter as tk
@@ -370,8 +371,7 @@ def interactive_plot_type_selection_QT():
     def update_file_paths(file_paths):
         nonlocal file_data  # Use nonlocal to modify the variable
         file_data = file_paths
-        print("Updated File Paths:", file_data)  # Process file paths here
-
+        
     # Connect the signal to the callback function
     file_selector.files_data_updated.connect(update_file_paths)
     layout.addWidget(file_selector)
@@ -425,12 +425,11 @@ class FileSelectorApp(QWidget):
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
 
+        # Connect label input changes to update the file data
+        label_input.textChanged.connect(self.update_values)
 
-
-        # Connect "Browse" button to file selection logic
-        browse_button.clicked.connect(
-            lambda: self.select_file(browse_button, file_path_box, label_input)
-        )
+        # Use functools.partial to pass parameters to select_file
+        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input))
 
         # Add widgets to the row layout
         file_row_layout.addWidget(browse_button)
@@ -438,11 +437,10 @@ class FileSelectorApp(QWidget):
         file_row_layout.addWidget(QLabel("Label:"))
         file_row_layout.addWidget(label_input)
 
-
         # Add the row layout to the main layout
         self.layout.addLayout(file_row_layout)
 
-    def select_file(self, browse_button, file_path_box, label_input):
+    def select_file(self, file_path_box, label_input):
         # Open file dialog
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select File")
@@ -452,19 +450,31 @@ class FileSelectorApp(QWidget):
             dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
             file_path_box.setText(file_name)
 
-            # Get the corresponding label
+            # Set placeholder text in the label input
             label_input.setPlaceholderText(dir_name)
-            label = label_input.text() or dir_name  # Default to file name if label is empty
 
-            # Append the file data (path, label) to the list
-            self.file_data.append((file_path, label))
-
-            # Emit the updated file data
-            self.files_data_updated.emit(self.file_data)
+            # Automatically update the file data
+            self.update_values()
 
             # Automatically add a new row after the user selects a file
             self.add_file_row()
 
+    def update_values(self):
+        # Update file data with current file paths and labels
+        self.file_data = []
+        for file_row in self.layout.children():
+            if isinstance(file_row, QHBoxLayout):
+                file_path_box = file_row.itemAt(1).widget()  # File path box is the second widget
+                label_input = file_row.itemAt(3).widget()    # Label input is the fourth widget
+
+                file_path = file_path_box.text().strip()
+                label = label_input.text().strip() or label_input.placeholderText()
+
+                if file_path:  # Only add data if file path is not empty
+                    self.file_data.append((file_path, label))
+
+        # Emit the updated file data
+        self.files_data_updated.emit(self.file_data)
     
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process files with labels.")
