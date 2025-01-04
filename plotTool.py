@@ -102,50 +102,48 @@ def select_fig(file_path, fig_type):
     if fig_type == 'motion':
         times, variable_data = extract_motion_values(file_path)
         figures = [
-    	    # figure Name, Dimension, shift_flags, scale_flags
-    	    ["Heave", r"$cm$" , 1, 1],
-    	    ["Roll", r"$deg$" , 0, 1],
-    	    ["Surge" , r"$cm$", 0 ,0],
-    	    ["Pitch", r"$deg$", 0 ,0],
-    	    ["Yaw"  , r"$deg$", 0 ,0],
-    	    ["Sway" , r"$cm$" , 0 ,0]
+    	    # figure Name, Dimension
+    	    ["Heave", r"$cm$"  ],
+    	    ["Roll", r"$deg$"  ],
+    	    ["Surge" , r"$cm$" ],
+    	    ["Pitch", r"$deg$" ],
+    	    ["Yaw"  , r"$deg$" ],
+    	    ["Sway" , r"$cm$"  ]
         ]	        
     elif fig_type == 'flux':       
         times, variable_data = extract_flux_values(file_path)
         figures = [
-    	    # figure Name, Dimension, shift_flags, scale_flags
-    	    ["Flux Net", r'$m^3/t$' , 1, 1],
-    	    ["Flux Abs", r'$m^3/t$' , 1, 1]
+    	    # figure Name, Dimension
+    	    ["Flux Net", r'$m^3/t$' ],
+    	    ["Flux Abs", r'$m^3/t$' ]
         ]
     elif fig_type == 'force':   
         times, variable_data = extract_force_values(file_path)
         figures = [
-    	    # figure Name, Dimension, shift_flags, scale_flags
-    	    ["x-Force", r'$N$' , 1, 1],
-    	    ["y-Force", r'$N$' , 1, 1],
-    	    ["z-Force", r'$N$' , 1, 1]
+    	    # figure Name, Dimension
+    	    ["x-Force", r'$N$' ],
+    	    ["y-Force", r'$N$' ],
+    	    ["z-Force", r'$N$' ]
         ]
     elif fig_type == 'interfaceHeight':   
         times, variable_data = extract_interfaceHeight_values(file_path)
         figures = [
-    	    # figure Name, Dimension, shift_flags, scale_flags
-    	    ["Amplitude (Gauge 1)", r'$m$' , 1, 1],
-    	    ["Amplitude (Gauge 2)", r'$m$' , 1, 1],
-    	    ["Amplitude (Gauge 3)", r'$m$' , 1, 1],
-    	    ["Amplitude (Gauge 4)", r'$m$' , 1, 1],
-    	    ["Amplitude (Gauge 5)", r'$m$' , 1, 1],
-    	    ["Amplitude (Gauge 6)", r'$m$' , 1, 1],
-    	    ["Amplitude (Gauge 7)", r'$m$' , 1, 1]
+    	    # figure Name, Dimension
+    	    ["Amplitude (Gauge 1)", r'$m$' ],
+    	    ["Amplitude (Gauge 2)", r'$m$' ],
+    	    ["Amplitude (Gauge 3)", r'$m$' ],
+    	    ["Amplitude (Gauge 4)", r'$m$' ],
+    	    ["Amplitude (Gauge 5)", r'$m$' ],
+    	    ["Amplitude (Gauge 6)", r'$m$' ],
+    	    ["Amplitude (Gauge 7)", r'$m$' ]
         ]         
     else:
         raise ValueError(f"Unknown fig_type: {fig_type} Available fig_type: motion, flux, force, interfaceHeight")
         
     figure_names = [entry[0] for entry in figures]
-    dims = [entry[1] for entry in figures]    
-    shift_flags = [entry[2] for entry in figures]
-    scale_flags = [entry[3] for entry in figures]
+    dims = [entry[1] for entry in figures]
         
-    return times, variable_data, figure_names, dims, shift_flags, scale_flags
+    return times, variable_data, figure_names, dims
 
 def save_extracted_data(directory, label, figure_name, times, data):
     """
@@ -160,7 +158,7 @@ def save_extracted_data(directory, label, figure_name, times, data):
         for t, d in zip(times, data):
             f.write(f"{t}, {d}\n")
 
-def dynamic_plot(files, labels, fig_type, x_min, x_max, save_plot=False, save_data=False, shift_values=None, scale_values=None):
+def dynamic_plot(files, labels, fig_type, x_min, x_max, save_plot=False, save_data=False):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
@@ -172,23 +170,23 @@ def dynamic_plot(files, labels, fig_type, x_min, x_max, save_plot=False, save_da
     linestyles = ['-', '--', ':', '-.']  # linestyle cycle
     
     for i, file in enumerate(files):
-        times, variables, figure_names, dims, shift_flags, scale_flags = select_fig(file, fig_type)
+        times, variables, figure_names, dims = select_fig(file, fig_type)
         max_num_variables = max(max_num_variables, len(variables))
        
         # Ensure arrays have the same length
         min_length = min(len(times), len(variables[0]))
         times, variables = times[:min_length], variables[:min_length]
 
-        # Apply shifts and scaling to each variable if needed
-        shift_value=shift_values[i]
-        scale_value=scale_values[i]        
-        for i, var in enumerate(variables):
-            if scale_flags[i]:  # Check if scale is applied
-                var = var / scale_value  # Apply scale        
-            if shift_flags[i]:  # Check if shift is applied
-                var = var + shift_value  # Apply shift
+        # # Apply shifts and scaling to each variable if needed
+        # shift_value=0
+        # scale_value=1       
+        # for i, var in enumerate(variables):
+        #     if i == 0 or i == 2: 
+        #         var = var / scale_value  # Apply scale        
+        #     if i == 0 or i == 2: 
+        #         var = var + shift_value  # Apply shift
                 
-            variables[i] = var
+        #     variables[i] = var
 
         parsed_data.append((times, variables))
     
@@ -240,37 +238,17 @@ def dynamic_plot(files, labels, fig_type, x_min, x_max, save_plot=False, save_da
 
 def interactive_file_selection_TK():
     """
-    Open a file dialog to select files interactively and return the selected files with their corresponding shift and scale values.
+    Open a file dialog to select files interactively and return the selected files
     """
     root = tk.Tk()
     root.withdraw()  # Hide the root window
 
-    # Ask for corresponding shift and scale values
+    # Ask for corresponding Label
     file_paths = []
 
     # Open file dialog
     file_paths = filedialog.askopenfilenames(title="Select Files", filetypes=[("All Files", "*.*")])
 
-    return file_paths
-
-def interactive_file_selection_QT():
-    """
-    Open a file dialog to select files interactively and return the selected files with their corresponding shift and scale values.
-    """
-    file_dialog = QFileDialog()  # Create a file dialog instance
-
-    # Set options for the file dialog
-    file_dialog.setFileMode(QFileDialog.ExistingFiles)  # Allow selecting multiple files
-    file_dialog.setNameFilter("All Files (*.*)")  # Filter for all files
-    file_dialog.setWindowTitle("Select Files")  # Set the dialog title
-
-    # Ask for corresponding shift and scale values
-    file_paths = []
-
-    # Open file dialog
-    if file_dialog.exec_():
-        file_paths = file_dialog.selectedFiles()  # Return the selected file paths
-    
     return file_paths
 
 def interactive_plot_type_selection_TK():
@@ -427,7 +405,7 @@ class FileSelectorApp(QWidget):
     def init_ui(self):
         self.setWindowTitle("File Selector")
         self.layout = QVBoxLayout()
-        self.file_data = []  # List to store file data (path, label, shift, scale)
+        self.file_data = []  # List to store file data (path, label)
 
         # Add the initial file row
         self.add_file_row()
@@ -447,17 +425,11 @@ class FileSelectorApp(QWidget):
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
 
-        # Shift value input field
-        shift_input = QLineEdit()
-        shift_input.setPlaceholderText("0")
 
-        # Scale value input field
-        scale_input = QLineEdit()
-        scale_input.setPlaceholderText("1")
 
         # Connect "Browse" button to file selection logic
         browse_button.clicked.connect(
-            lambda: self.select_file(browse_button, file_path_box, label_input, shift_input, scale_input)
+            lambda: self.select_file(browse_button, file_path_box, label_input)
         )
 
         # Add widgets to the row layout
@@ -465,15 +437,12 @@ class FileSelectorApp(QWidget):
         file_row_layout.addWidget(file_path_box)
         file_row_layout.addWidget(QLabel("Label:"))
         file_row_layout.addWidget(label_input)
-        file_row_layout.addWidget(QLabel("Shift:"))
-        file_row_layout.addWidget(shift_input)
-        file_row_layout.addWidget(QLabel("Scale:"))
-        file_row_layout.addWidget(scale_input)
+
 
         # Add the row layout to the main layout
         self.layout.addLayout(file_row_layout)
 
-    def select_file(self, browse_button, file_path_box, label_input, shift_input, scale_input):
+    def select_file(self, browse_button, file_path_box, label_input):
         # Open file dialog
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select File")
@@ -483,14 +452,12 @@ class FileSelectorApp(QWidget):
             dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
             file_path_box.setText(file_name)
 
-            # Get the corresponding label, shift, and scale values
+            # Get the corresponding label
             label_input.setPlaceholderText(dir_name)
             label = label_input.text() or dir_name  # Default to file name if label is empty
-            shift_value = float(shift_input.text() or 0)  # Default shift to 0
-            scale_value = float(scale_input.text() or 1)  # Default scale to 1
 
-            # Append the file data (path, label, shift, scale) to the list
-            self.file_data.append((file_path, label, shift_value, scale_value))
+            # Append the file data (path, label) to the list
+            self.file_data.append((file_path, label))
 
             # Emit the updated file data
             self.files_data_updated.emit(self.file_data)
@@ -498,70 +465,11 @@ class FileSelectorApp(QWidget):
             # Automatically add a new row after the user selects a file
             self.add_file_row()
 
-class InputDialog(QDialog):
-    def __init__(self, dir_name, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Input Values")
-        self.dir_name = dir_name
-        self.result = None  # To store the input values
-        self.more_cases = False  # To indicate whether to add more cases
-
-        # Create layout
-        layout = QVBoxLayout()
-
-        # Label input
-        self.label_input = QLineEdit(self)
-        self.label_input.setText(dir_name)  # Default value
-        layout.addWidget(QLabel(f"Enter label:"))
-        layout.addWidget(self.label_input)
-
-        # Shift value input
-        self.shift_input = QLineEdit(self)
-        self.shift_input.setText("0")  # Default value
-        layout.addWidget(QLabel("Enter shift value:"))
-        layout.addWidget(self.shift_input)
-
-        # Scale value input
-        self.scale_input = QLineEdit(self)
-        self.scale_input.setText("1")  # Default value
-        layout.addWidget(QLabel("Enter scale value:"))
-        layout.addWidget(self.scale_input)
-
-        # Submit and Add button
-        submit_add_button = QPushButton("Submit and Add", self)
-        submit_add_button.clicked.connect(self.submit_and_add)
-        layout.addWidget(submit_add_button)
-
-        # Submit and Finish button
-        submit_finish_button = QPushButton("Submit and Finish", self)
-        submit_finish_button.clicked.connect(self.submit_and_finish)
-        layout.addWidget(submit_finish_button)
-
-        self.setLayout(layout)
-
-    def submit_and_finish(self):
-        self.more_cases = False
-        self.accept_inputs()
-
-    def submit_and_add(self):
-        self.more_cases = True
-        self.accept_inputs()
-
-    def accept_inputs(self):
-        try:
-            label = self.label_input.text() or self.dir_name
-            shift_value = float(self.shift_input.text() or 0)
-            scale_value = float(self.scale_input.text() or 1)
-            self.result = {"label": label, "shift_value": shift_value, "scale_value": scale_value}
-            self.accept()  # Close the dialog with success
-        except ValueError:
-            # Handle invalid input cases (optional)
-            pass
     
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Process files with labels, shift values, and scale values.")
+    parser = argparse.ArgumentParser(description="Process files with labels.")
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
-                       help="List of input files followed by their options: -label (add a label, default: dir_name), -sh (shift, default: 0), -sc (scale, default: 1)"
+                       help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
     parser.add_argument('-plot_type', '-pt', type=str,
                        help='Specify the type of plot (motion, flux, force, interfaceHeight)'
@@ -589,16 +497,14 @@ def parse_arguments():
         while i < len(args.file_args):
             file_path = args.file_args[i]
             dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
-            label, shift_value, scale_value = f"{dir_name}", 0, 1.0
+            label = f"{dir_name}"
             i += 1
 
             while i < len(args.file_args) and args.file_args[i].startswith('-'):
                 if args.file_args[i] == "-label": label = args.file_args[i + 1]; i += 2
-                elif args.file_args[i] == "-sh": shift_value = float(args.file_args[i + 1]); i += 2
-                elif args.file_args[i] == "-sc": scale_value = float(args.file_args[i + 1]); i += 2
                 else: break
 
-            file_data.append((file_path, label, shift_value, scale_value))
+            file_data.append((file_path, label))
     else:
         # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight): ")
         if pyqt_available:
@@ -608,42 +514,15 @@ def parse_arguments():
         else:
             plot_type = interactive_plot_type_selection_TK()
 
-       
-#     else:
-#         file_data = []
-#         while True:
-#             # Open file dialog
-#             if pyqt_available:
-#                 file_paths = interactive_file_selection_QT()
-#             else:
-#                 file_paths = interactive_file_selection_TK()
-            
-#             for file_path in file_paths:
-#                 dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
-#  #               label = input(f"Enter label (default: {dir_name}): ") or dir_name
-#  #               shift_value = float(input(f"Enter shift value for {label} (default: 0): ") or 0)
-#  #               scale_value = float(input(f"Enter scale value for {label} (default: 1): ") or 1)
-#                 dialog = InputDialog(dir_name)
-#                 if dialog.exec_():  # If the user submits the dialog
-#                     label = dialog.result["label"]
-#                     shift_value = dialog.result["shift_value"]
-#                     scale_value = dialog.result["scale_value"]
-#                 file_data.append((file_path, label, shift_value, scale_value))
-
-#             more_cases = dialog.more_cases
-# #           more_cases = input("Do you want to add more cases? (yes/no, default: no): ").strip().lower() in ['yes', 'y']
-#             if not more_cases:
-#                 break
-
     return plot_type, save_plot, save_data, x_min, x_max, file_data
 
 
 if __name__ == "__main__":
     
 #    file_data = [
-#          # File, label, shift_values, scale_values
-#         ["./OverSet/log.interFoam","OverSet", 0, 0],
-#         ["./BodyFitted/log.interFoam","BodyFitted", 0, 1]      
+#          # File, label
+#         ["./OverSet/log.interFoam","OverSet"],
+#         ["./BodyFitted/log.interFoam","BodyFitted"]      
 #    ]
       
     plot_type, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
@@ -651,8 +530,6 @@ if __name__ == "__main__":
     for file_info in file_data:
         print("File:", os.path.relpath(file_info[0]))
         print("Label:", file_info[1])
-        print("Shift Value:", file_info[2])
-        print("Scale Value:", file_info[3])
         print()
     print(f"Plot type: {plot_type}")
     print(f"Save Plot: {save_plot}")
@@ -661,9 +538,7 @@ if __name__ == "__main__":
     print()
 
     files = [entry[0] for entry in file_data]    
-    labels = [entry[1] for entry in file_data]    
-    shift_values = [entry[2] for entry in file_data]
-    scale_values = [entry[3] for entry in file_data]
+    labels = [entry[1] for entry in file_data]
             
     # Plot and save data
-    dynamic_plot(files, labels, plot_type, x_min, x_max, save_plot, save_data, shift_values, scale_values)
+    dynamic_plot(files, labels, plot_type, x_min, x_max, save_plot, save_data)
