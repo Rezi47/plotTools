@@ -348,6 +348,7 @@ def interactive_plot_type_selection_QT():
     save_data_checkbox = QCheckBox("Save Data")
     save_layout.addWidget(save_plot_checkbox)
     save_layout.addWidget(save_data_checkbox)
+    save_layout.setAlignment(Qt.AlignLeft)  # Align checkboxes to the left
     layout.addLayout(save_layout)
 
     # Add the second horizontal line separator
