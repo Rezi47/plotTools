@@ -81,8 +81,7 @@ def select_fig(fig_type):
 
 def extract_pressureProbe_values(file_path):
     """
-    Reads data from the given file, skipping the first 5 comment lines and
-    extracting the Time (column 1) and the interfaceHeight values.
+    Reads data from the given file and pressureProbe values.
     """
     data = np.loadtxt(file_path, delimiter=None, skiprows=0, usecols=(1 ,2 ,3))
     data=data.T
@@ -92,8 +91,7 @@ def extract_pressureProbe_values(file_path):
 
 def extract_interfaceHeight_values(file_path):
     """
-    Reads data from the given file, skipping the first 5 comment lines and
-    extracting the Time (column 1) and the interfaceHeight values.
+    Reads data from the given file and interfaceHeight values.
     """
     data = np.loadtxt(file_path, delimiter=None, skiprows=0, usecols=(0 ,1 ,3 ,5 ,7))
     data=data.T
@@ -103,8 +101,7 @@ def extract_interfaceHeight_values(file_path):
     
 def extract_force_values(file_path):
     """
-    Reads data from the given file, skipping the first 4 comment lines and
-    extracting the Time (column 1) and the force values.
+    Reads data from the given file and force values.
     """
     with open(file_path, "r") as infile:
         cleaned_data = "".join(line.replace("(", "").replace(")", "") for line in infile)
@@ -117,8 +114,7 @@ def extract_force_values(file_path):
 
 def extract_flux_values(file_path):
     """
-    Reads data from the given file, skipping the first 5 comment lines and
-    extracting the Time (column 1) and the flux values.
+    Reads data from the given file and flux values.
     """
     data = np.loadtxt(file_path, delimiter=None, skiprows=5, usecols=(0, 3, 4))
     data=data.T
@@ -128,7 +124,7 @@ def extract_flux_values(file_path):
                 
 def extract_motion_values(file_path):
     """
-    Extracts Time and variable values from the log file.
+    Reads data from the given file and motion values.
     """
     times = []
     variable_data = []
@@ -502,8 +498,7 @@ def parse_arguments():
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
-    parser.add_argument('-plot_type', '-pt', type=str,
-                    choices=fig_type_mapping.keys(),
+    parser.add_argument('-plot_type', '-pt',
                     help=f"Specify the type of plot: {', '.join(fig_type_mapping.keys())}"
                     )
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Disable saving the plot (default: False)")
