@@ -21,6 +21,15 @@ except ImportError:
 
 app = QApplication(sys.argv)
 
+def define_fig_type_mapping():
+    fig_type_mapping = {
+        'motion': extract_motion_values,
+        'flux': extract_flux_values,
+        'force': extract_force_values,
+        'interfaceHeight': extract_interfaceHeight_values
+    }
+    return fig_type_mapping
+
 def extract_interfaceHeight_values(file_path):
     """
     Reads data from the given file, skipping the first 5 comment lines and
@@ -66,7 +75,7 @@ def extract_flux_values(file_path):
     variable_data = [data[1],data[2]]
     return times, variable_data
                 
-def extract_motion_values(log_file_path):
+def extract_motion_values(file_path):
     """
     Extracts Time and variable values from the log file.
     """
@@ -74,7 +83,7 @@ def extract_motion_values(log_file_path):
     variable_data = []
 
     previous_line = ""  # Keep track of the previous line
-    with open(log_file_path, 'r') as file:
+    with open(file_path, 'r') as file:
         for line in file:
             if line.startswith("Time =") and previous_line.startswith("deltaT"):
                 time_str = line.split('=')[1].strip()
@@ -99,23 +108,16 @@ def extract_motion_values(log_file_path):
 def extract_data(files, fig_type):
     parsed_data = []
 
+    # for file in files:
     for i, file in enumerate(files):
 
-        if fig_type == 'motion':
-            times, variable_data = extract_motion_values(file)
-        
-        elif fig_type == 'flux':       
-            times, variable_data = extract_flux_values(file)
-        
-        elif fig_type == 'force':   
-            times, variable_data = extract_force_values(file)
+        fig_type_mapping = define_fig_type_mapping()
 
-        elif fig_type == 'interfaceHeight':   
-            times, variable_data = extract_interfaceHeight_values(file)
-
+        if fig_type in fig_type_mapping:
+            times, variable_data = fig_type_mapping[fig_type](file)
         else:
-            raise ValueError(f"Unknown fig_type: {fig_type} Available fig_type: motion, flux, force, interfaceHeight")
-
+            raise ValueError(f"Unknown fig_type: {fig_type}. Available fig_types: {', '.join(fig_type_mapping.keys())}")
+            
         # Ensure arrays have the same length
         min_length = min(len(times), len(variable_data[0]))
         times, variable_data = times[:min_length], variable_data[:min_length]
@@ -329,13 +331,17 @@ def interactive_plot_type_selection_QT():
     title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
     layout.addWidget(title_label)
 
-    # Buttons for each plot type with toggling functionality
-    plot_buttons = {
-        "motion": QPushButton("motion"),
-        "flux": QPushButton("flux"),
-        "force": QPushButton("force"),
-        "interfaceHeight": QPushButton("interfaceHeight")
-    }
+    # # Buttons for each plot type with toggling functionality
+    # plot_buttons = {
+    #     "motion": QPushButton("motion"),
+    #     "flux": QPushButton("flux"),
+    #     "force": QPushButton("force"),
+    #     "interfaceHeight": QPushButton("interfaceHeight")
+    # }
+
+    fig_type_mapping = define_fig_type_mapping()
+
+    plot_buttons = {key: QPushButton(key) for key in fig_type_mapping.keys()}
 
     for plot_value, button in plot_buttons.items():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
@@ -534,7 +540,6 @@ def parse_arguments():
 
             file_data.append((file_path, label))
     else:
-        # plot_type = input("Enter the plot type (motion, flux, force, interfaceHeight): ")
         if pyqt_available:
 
             plot_type, save_plot, save_data, x_min, x_max, file_data = interactive_plot_type_selection_QT()
