@@ -65,7 +65,7 @@ def select_fig(fig_type):
             [label, r'$kPa$'] for label in [f"Pressure (Probe {i})" for i in range(1, 10)]
         ],
          'generic': [
-            [label, f"{dimension}"] for label in [f"{axis_name}" for i in range(1, 10)]
+            [label, fr"${dimension}$"] for label in [fr"{axis_name}" for i in range(1, 10)]
         ]
     }       
 
@@ -368,6 +368,23 @@ def interactive_plot_type_selection_QT():
     line1.setFrameShadow(QFrame.Sunken)
     layout.addWidget(line1)
 
+    # Add "Axis Name" and "Dimension" fields right after the plot type buttons
+    axis_name_label = QLabel("Axis Name:")
+    axis_name_input = QLineEdit()
+    dimension_label = QLabel("Dimension:")
+    dimension_input = QLineEdit()
+
+    # Initially hide these inputs
+    axis_name_label.setVisible(False)
+    axis_name_input.setVisible(False)
+    dimension_label.setVisible(False)
+    dimension_input.setVisible(False)
+
+    layout.addWidget(axis_name_label)
+    layout.addWidget(axis_name_input)
+    layout.addWidget(dimension_label)
+    layout.addWidget(dimension_input)
+
     # Add checkboxes for "Save Plot" and "Save Data" in the same row
     save_layout = QHBoxLayout()
     save_plot_checkbox = QCheckBox("Save Plot")
@@ -405,23 +422,6 @@ def interactive_plot_type_selection_QT():
     line3.setFrameShape(QFrame.HLine)
     line3.setFrameShadow(QFrame.Sunken)
     layout.addWidget(line3)
-
-    # Add "Axis Name" and "Dimension" fields (initially hidden)
-    axis_name_label = QLabel("Axis Name:")
-    axis_name_input = QLineEdit()
-    dimension_label = QLabel("Dimension:")
-    dimension_input = QLineEdit()
-
-    # Initially hide these inputs
-    axis_name_label.setVisible(False)
-    axis_name_input.setVisible(False)
-    dimension_label.setVisible(False)
-    dimension_input.setVisible(False)
-
-    layout.addWidget(axis_name_label)
-    layout.addWidget(axis_name_input)
-    layout.addWidget(dimension_label)
-    layout.addWidget(dimension_input)
 
     # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
