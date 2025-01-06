@@ -40,6 +40,10 @@ def select_fig(fig_type):
     """
     Parses a file to extract Time and variable data.
     """
+    # Ensure dimension and axis_name are defined
+    dimension = dimension if 'dimension' in locals() else None
+    axis_name = axis_name if 'axis_name' in locals() else None
+    
     yAxis_list = {
         'motion': [
             ["Heave", r"$cm$"],
@@ -550,41 +554,22 @@ def parse_arguments():
     # Parse known arguments first
     args = parser.parse_args()
 
-    # If Plot Type and no file are not provided, ask in interactive input
-    if  args.plot_type and args.file_args:
-        plot_type = args.plot_type
-        save_plot = args.save_plot
-        save_data = args.save_data
-        x_min = args.x_min
-        x_max = args.x_max   
+    # Use argparse for standard file input
+    file_data = []
+    i = 0
+    while i < len(args.file_args):
+        file_path = args.file_args[i]
+        dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
+        label = f"{dir_name}"
+        i += 1
 
-        # Use argparse for standard file input
-        file_data = []
-        i = 0
-        while i < len(args.file_args):
-            file_path = args.file_args[i]
-            dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
-            label = f"{dir_name}"
-            i += 1
+        while i < len(args.file_args) and args.file_args[i].startswith('-'):
+            if args.file_args[i] == "-label": label = args.file_args[i + 1]; i += 2
+            else: break
 
-            while i < len(args.file_args) and args.file_args[i].startswith('-'):
-                if args.file_args[i] == "-label": label = args.file_args[i + 1]; i += 2
-                else: break
+        file_data.append((file_path, label))
 
-            file_data.append((file_path, label))
-    else:
-        if pyqt_available:
-
-            plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension = interactive_plot_type_selection_QT()
-
-        else:
-            save_plot = args.save_plot
-            save_data = args.save_data
-            x_min = args.x_min
-            x_max = args.x_max   
-            plot_type = interactive_plot_type_selection_TK()
-
-    return plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension
+    return args.plot_type, args.save_plot, args.save_data, args.x_min, args.x_max, file_data
 
 
 if __name__ == "__main__":
@@ -595,8 +580,14 @@ if __name__ == "__main__":
 #         ["./BodyFitted/log.interFoam","BodyFitted"]      
 #    ]
       
-    plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension = parse_arguments()
+    plot_type, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
 
+    if not plot_type or not file_data:
+        if pyqt_available:
+            plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension = interactive_plot_type_selection_QT()
+        else: 
+            plot_type = interactive_plot_type_selection_TK()
+            
     for file_info in file_data:
         print("File:", os.path.relpath(file_info[0]))
         print("Label:", file_info[1])
