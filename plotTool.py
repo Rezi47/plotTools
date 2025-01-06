@@ -116,8 +116,6 @@ def extract_data(files, fig_type):
         else:
             raise ValueError(f"Unknown fig_type: {fig_type} Available fig_type: motion, flux, force, interfaceHeight")
 
-
-        
         # Ensure arrays have the same length
         min_length = min(len(times), len(variable_data[0]))
         times, variable_data = times[:min_length], variable_data[:min_length]
@@ -182,19 +180,6 @@ def select_fig(fig_type):
         
     return figure_names, dims
 
-def save_extracted_data(directory, label, figure_name, times, data):
-    """
-    Saves extracted data to a file in the specified directory.
-    """
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    
-    file_path = os.path.join(directory, f"{label}_{figure_name}.csv")
-    with open(file_path, 'w') as f:
-        f.write(f"Time, {figure_name}\n")
-        for t, d in zip(times, data):
-            f.write(f"{t}, {d}\n")
-
 def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
@@ -258,6 +243,19 @@ def save_func(files, parsed_data, labels, fig_type, save_plot=False, save_data=F
             for i, var in enumerate(variables):
                 save_extracted_data(output_dir, label, figure_names[i], times, var)
             print(f"Data saved for {label} in {output_dir}")
+
+def save_extracted_data(directory, label, figure_name, times, data):
+    """
+    Saves extracted data to a file in the specified directory.
+    """
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    file_path = os.path.join(directory, f"{label}_{figure_name}.csv")
+    with open(file_path, 'w') as f:
+        f.write(f"Time, {figure_name}\n")
+        for t, d in zip(times, data):
+            f.write(f"{t}, {d}\n")
             
 def interactive_plot_type_selection_TK():
     root = tk.Tk()
