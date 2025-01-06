@@ -96,12 +96,52 @@ def extract_motion_values(log_file_path):
     variable_data = list(map(list, zip(*variable_data))) if variable_data else []
     return np.array(times), [np.array(var) for var in variable_data]
 
-def select_fig(file_path, fig_type):
+def extract_data(files, fig_type):
+    parsed_data = []
+
+    for i, file in enumerate(files):
+
+        if fig_type == 'motion':
+            times, variable_data = extract_motion_values(file)
+        
+        elif fig_type == 'flux':       
+            times, variable_data = extract_flux_values(file)
+        
+        elif fig_type == 'force':   
+            times, variable_data = extract_force_values(file)
+
+        elif fig_type == 'interfaceHeight':   
+            times, variable_data = extract_interfaceHeight_values(file)
+
+        else:
+            raise ValueError(f"Unknown fig_type: {fig_type} Available fig_type: motion, flux, force, interfaceHeight")
+
+
+        
+        # Ensure arrays have the same length
+        min_length = min(len(times), len(variable_data[0]))
+        times, variable_data = times[:min_length], variable_data[:min_length]
+
+        # # Apply shifts and scaling to each variable if needed
+        # if i == 0 or i== 1: //select file(s) to apply shift and scale
+        #     shift_value=0
+        #     scale_value=1       
+        #     for i, var in enumerate(variable_data):
+        #         if i == 0 or i == 2:  //select plot(s) to apply shift and scale
+        #             var = var / scale_value  # Apply scale        
+        #         if i == 0 or i == 2: 
+        #             var = var + shift_value  # Apply shift             
+        #         variable_data[i] = var
+
+        parsed_data.append((times, variable_data))
+    
+    return parsed_data
+          
+def select_fig(fig_type):
     """
     Parses a file to extract Time and variable data.
     """
     if fig_type == 'motion':
-        times, variable_data = extract_motion_values(file_path)
         figures = [
     	    # figure Name, Dimension
     	    ["Heave", r"$cm$"  ],
@@ -111,23 +151,20 @@ def select_fig(file_path, fig_type):
     	    ["Yaw"  , r"$deg$" ],
     	    ["Sway" , r"$cm$"  ]
         ]	        
-    elif fig_type == 'flux':       
-        times, variable_data = extract_flux_values(file_path)
+    elif fig_type == 'flux':
         figures = [
     	    # figure Name, Dimension
     	    ["Flux Net", r'$m^3/t$' ],
     	    ["Flux Abs", r'$m^3/t$' ]
         ]
-    elif fig_type == 'force':   
-        times, variable_data = extract_force_values(file_path)
+    elif fig_type == 'force':
         figures = [
     	    # figure Name, Dimension
     	    ["x-Force", r'$N$' ],
     	    ["y-Force", r'$N$' ],
     	    ["z-Force", r'$N$' ]
         ]
-    elif fig_type == 'interfaceHeight':   
-        times, variable_data = extract_interfaceHeight_values(file_path)
+    elif fig_type == 'interfaceHeight':
         figures = [
     	    # figure Name, Dimension
     	    ["Amplitude (Gauge 1)", r'$m$' ],
@@ -138,13 +175,12 @@ def select_fig(file_path, fig_type):
     	    ["Amplitude (Gauge 6)", r'$m$' ],
     	    ["Amplitude (Gauge 7)", r'$m$' ]
         ]         
-    else:
-        raise ValueError(f"Unknown fig_type: {fig_type} Available fig_type: motion, flux, force, interfaceHeight")
+
         
     figure_names = [entry[0] for entry in figures]
     dims = [entry[1] for entry in figures]
         
-    return times, variable_data, figure_names, dims
+    return figure_names, dims
 
 def save_extracted_data(directory, label, figure_name, times, data):
     """
@@ -159,38 +195,21 @@ def save_extracted_data(directory, label, figure_name, times, data):
         for t, d in zip(times, data):
             f.write(f"{t}, {d}\n")
 
-def dynamic_plot(files, labels, fig_type, x_min, x_max, save_plot=False, save_data=False):
+def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max, save_plot=False, save_data=False):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
-    # Parse data from all files
-    parsed_data = []
-    max_num_variables = 0
 
     colors = ['b', 'r', 'g', 'c', 'm', 'y']  # color cycle
     linestyles = ['-', '--', ':', '-.']  # linestyle cycle
-    
-    for i, file in enumerate(files):
-        times, variables, figure_names, dims = select_fig(file, fig_type)
-        max_num_variables = max(max_num_variables, len(variables))
-       
-        # Ensure arrays have the same length
-        min_length = min(len(times), len(variables[0]))
-        times, variables = times[:min_length], variables[:min_length]
+    figure_names, dims = select_fig(fig_type)
+ 
+    # Maximum length of variable_data
+    max_num_variables = 0
+    for item in parsed_data:
+        current_length = len(item[1])
+        max_num_variables = max(max_num_variables, current_length)
 
-        # # Apply shifts and scaling to each variable if needed
-        # if i == 0 or i== 1: //select file(s) to apply shift and scale
-        #     shift_value=0
-        #     scale_value=1       
-        #     for i, var in enumerate(variables):
-        #         if i == 0 or i == 2:  //select plot(s) to apply shift and scale
-        #             var = var / scale_value  # Apply scale        
-        #         if i == 0 or i == 2: 
-        #             var = var + shift_value  # Apply shift             
-        #         variables[i] = var
-
-        parsed_data.append((times, variables))
-    
     # Create subplots dynamically
     fig, axs = plt.subplots(1, max_num_variables, figsize=(5 * max_num_variables, 5))
     if max_num_variables == 1:  # Single subplot case
@@ -547,6 +566,9 @@ if __name__ == "__main__":
 
     files = [entry[0] for entry in file_data]    
     labels = [entry[1] for entry in file_data]
-            
+    
+    # Parse data from all files
+    parsed_data = extract_data(files, plot_type)
+
     # Plot and save data
-    dynamic_plot(files, labels, plot_type, x_min, x_max, save_plot, save_data)
+    dynamic_plot(parsed_data, labels, plot_type, x_min, x_max, save_plot, save_data)
