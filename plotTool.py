@@ -464,6 +464,9 @@ class FileSelectorApp(QWidget):
             dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
             file_path_box.setText(file_name)
 
+            # Store the full file path in the widget's object data
+            file_path_box.setProperty("full_path", file_path)
+
             # Set placeholder text in the label input
             label_input.setPlaceholderText(dir_name)
 
@@ -481,7 +484,7 @@ class FileSelectorApp(QWidget):
                 file_path_box = file_row.itemAt(1).widget()  # File path box is the second widget
                 label_input = file_row.itemAt(3).widget()    # Label input is the fourth widget
 
-                file_path = file_path_box.text().strip()
+                file_path = file_path_box.property("full_path")
                 label = label_input.text().strip() or label_input.placeholderText()
 
                 if file_path:  # Only add data if file path is not empty
