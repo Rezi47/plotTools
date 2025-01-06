@@ -195,7 +195,7 @@ def save_extracted_data(directory, label, figure_name, times, data):
         for t, d in zip(times, data):
             f.write(f"{t}, {d}\n")
 
-def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max, save_plot=False, save_data=False):
+def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
@@ -236,6 +236,10 @@ def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max, save_plot=False, s
 
     # Adjust layout
     plt.tight_layout()
+    plt.show()
+
+def save_func(files, parsed_data, labels, fig_type, save_plot=False, save_data=False):
+    figure_names, _ = select_fig(fig_type)
 
     # Save or show the plot
     if save_plot:
@@ -244,7 +248,7 @@ def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max, save_plot=False, s
             os.makedirs(output_dir)
         plt.savefig(os.path.join(output_dir, f"{fig_type}_comparison.png"))
         print(f"Figure saved to {output_dir}/{fig_type}_comparison.png")
-    plt.show()
+
 
     # Save extracted data if enabled
     if save_data:
@@ -254,7 +258,7 @@ def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max, save_plot=False, s
             for i, var in enumerate(variables):
                 save_extracted_data(output_dir, label, figure_names[i], times, var)
             print(f"Data saved for {label} in {output_dir}")
-
+            
 def interactive_plot_type_selection_TK():
     root = tk.Tk()
     plot_type = []
@@ -574,4 +578,6 @@ if __name__ == "__main__":
     parsed_data = extract_data(files, plot_type)
 
     # Plot and save data
-    dynamic_plot(parsed_data, labels, plot_type, x_min, x_max, save_plot, save_data)
+    dynamic_plot(parsed_data, labels, plot_type, x_min, x_max)
+
+    save_func(files, parsed_data, labels, plot_type, save_plot, save_data)
