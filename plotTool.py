@@ -40,9 +40,9 @@ def select_fig(fig_type):
     """
     Parses a file to extract Time and variable data.
     """
-    # Ensure dimension and axis_name are defined
-    # dimension = dimension if 'dimension' in locals() else None
-    # axis_name = axis_name if 'axis_name' in locals() else None
+    # Ensure axis_dim and axis_title are defined
+    # axis_dim = axis_dim if 'axis_dim' in locals() else None
+    # axis_title = axis_title if 'axis_title' in locals() else None
     
     yAxis_list = {
         'motion': [
@@ -69,7 +69,7 @@ def select_fig(fig_type):
             [label, r'$kPa$'] for label in [f"Pressure (Probe {i})" for i in range(1, 10)]
         ],
          'generic': [
-            [label, fr"${axis_dim}$"] for label in [fr"{axis_title}" for i in range(1, 10)]
+            [label, fr"${axis_dim}$"] for label in [fr"{axis_title} {i}" for i in range(1, 10)]
         ]
     }       
 
@@ -301,21 +301,21 @@ def interactive_plot_type_selection_QT():
     x_min = None
     x_max = None
     file_data = []
-    axis_name = None
-    dimension = None
+    axis_title = None
+    axis_dim = None
 
     def update_values():
-        nonlocal plot_type, save_plot, save_data, x_min, x_max, axis_name, dimension
+        nonlocal plot_type, save_plot, save_data, x_min, x_max, axis_title, axis_dim
         # Update the current values from the UI elements
         save_plot = save_plot_checkbox.isChecked()
         save_data = save_data_checkbox.isChecked()
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
         
-        # Capture axis name and dimension if "Generic Bottom" is selected
+        # Capture axis name and axis_dim if "Generic Bottom" is selected
         if plot_type == 'generic':  # Assuming this is the name of the plot type
-            axis_name = axis_name_input.text() if axis_name_input.text() else None
-            dimension = dimension_input.text() if dimension_input.text() else None
+            axis_title = axis_title_input.text() if axis_title_input.text() else None
+            axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
 
     def set_plot_type(plot_value):
         nonlocal plot_type
@@ -327,17 +327,17 @@ def interactive_plot_type_selection_QT():
             button.setStyleSheet('background-color: none')  # Reset all buttons
         plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
 
-        # Dynamically add fields for "Axis Name" and "Dimension" if "Generic Bottom" is selected
+        # Dynamically add fields for "Axis Title" and "Dimension" if "generic" is selected
         if plot_value == 'generic':
-            axis_name_label.setVisible(True)
-            axis_name_input.setVisible(True)
-            dimension_label.setVisible(True)
-            dimension_input.setVisible(True)
+            axis_title_label.setVisible(True)
+            axis_title_input.setVisible(True)
+            axis_dim_label.setVisible(True)
+            axis_dim_input.setVisible(True)
         else:
-            axis_name_label.setVisible(False)
-            axis_name_input.setVisible(False)
-            dimension_label.setVisible(False)
-            dimension_input.setVisible(False)
+            axis_title_label.setVisible(False)
+            axis_title_input.setVisible(False)
+            axis_dim_label.setVisible(False)
+            axis_dim_input.setVisible(False)
 
     def plot_button_clicked():
         # Update values before closing the window
@@ -373,21 +373,21 @@ def interactive_plot_type_selection_QT():
     layout.addWidget(line1)
 
     # Add "Axis Name" and "Dimension" fields right after the plot type buttons
-    axis_name_label = QLabel("Axis Name:")
-    axis_name_input = QLineEdit()
-    dimension_label = QLabel("Dimension:")
-    dimension_input = QLineEdit()
+    axis_title_label = QLabel("Axis Title:")
+    axis_title_input = QLineEdit()
+    axis_dim_label = QLabel("Dimension:")
+    axis_dim_input = QLineEdit()
 
     # Initially hide these inputs
-    axis_name_label.setVisible(False)
-    axis_name_input.setVisible(False)
-    dimension_label.setVisible(False)
-    dimension_input.setVisible(False)
+    axis_title_label.setVisible(False)
+    axis_title_input.setVisible(False)
+    axis_dim_label.setVisible(False)
+    axis_dim_input.setVisible(False)
 
-    layout.addWidget(axis_name_label)
-    layout.addWidget(axis_name_input)
-    layout.addWidget(dimension_label)
-    layout.addWidget(dimension_input)
+    layout.addWidget(axis_title_label)
+    layout.addWidget(axis_title_input)
+    layout.addWidget(axis_dim_label)
+    layout.addWidget(axis_dim_input)
 
     # Add checkboxes for "Save Plot" and "Save Data" in the same row
     save_layout = QHBoxLayout()
@@ -451,7 +451,7 @@ def interactive_plot_type_selection_QT():
     # Execute the application
     app.exec_()
 
-    return plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension
+    return plot_type,axis_title, axis_dim, save_plot, save_data, x_min, x_max, file_data
 
 class FileSelectorApp(QWidget):
     files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
@@ -580,12 +580,12 @@ if __name__ == "__main__":
  #         ["./BodyFitted/log.interFoam","BodyFitted"]      
  #    ]
 
-
     plot_type, axis_title, axis_dim, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
 
     if not plot_type or not file_data:
         if pyqt_available:
-            plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension = interactive_plot_type_selection_QT()
+            plot_type, axis_title, axis_dim, save_plot, save_data, x_min, x_max, file_data = interactive_plot_type_selection_QT()
+            print(f"axis_title: {axis_title}")
         else: 
             plot_type = interactive_plot_type_selection_TK()
             
@@ -594,6 +594,8 @@ if __name__ == "__main__":
         print("Label:", file_info[1])
         print()
     print(f"Plot type: {plot_type}")
+    print(f"Axis title: {axis_title}")
+    print(f"Axis Dimension: {axis_dim}")
     print(f"Save Plot: {save_plot}")
     print(f"Save Data: {save_data}")
     print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
