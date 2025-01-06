@@ -65,7 +65,7 @@ def select_fig(fig_type):
             [label, r'$kPa$'] for label in [f"Pressure (Probe {i})" for i in range(1, 10)]
         ],
          'generic': [
-            [label, r'$-$'] for label in [f"Data (Num {i})" for i in range(1, 10)]
+            [label, f"{dimension}"] for label in [f"{axis_name}" for i in range(1, 10)]
         ]
     }       
 
@@ -297,14 +297,21 @@ def interactive_plot_type_selection_QT():
     x_min = None
     x_max = None
     file_data = []
+    axis_name = None
+    dimension = None
 
     def update_values():
-        nonlocal plot_type, save_plot, save_data, x_min, x_max
+        nonlocal plot_type, save_plot, save_data, x_min, x_max, axis_name, dimension
         # Update the current values from the UI elements
         save_plot = save_plot_checkbox.isChecked()
         save_data = save_data_checkbox.isChecked()
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
+        
+        # Capture axis name and dimension if "Generic Bottom" is selected
+        if plot_type == 'generic':  # Assuming this is the name of the plot type
+            axis_name = axis_name_input.text() if axis_name_input.text() else None
+            dimension = dimension_input.text() if dimension_input.text() else None
 
     def set_plot_type(plot_value):
         nonlocal plot_type
@@ -315,6 +322,18 @@ def interactive_plot_type_selection_QT():
         for button in plot_buttons.values():
             button.setStyleSheet('background-color: none')  # Reset all buttons
         plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
+
+        # Dynamically add fields for "Axis Name" and "Dimension" if "Generic Bottom" is selected
+        if plot_value == 'generic':
+            axis_name_label.setVisible(True)
+            axis_name_input.setVisible(True)
+            dimension_label.setVisible(True)
+            dimension_input.setVisible(True)
+        else:
+            axis_name_label.setVisible(False)
+            axis_name_input.setVisible(False)
+            dimension_label.setVisible(False)
+            dimension_input.setVisible(False)
 
     def plot_button_clicked():
         # Update values before closing the window
@@ -387,6 +406,23 @@ def interactive_plot_type_selection_QT():
     line3.setFrameShadow(QFrame.Sunken)
     layout.addWidget(line3)
 
+    # Add "Axis Name" and "Dimension" fields (initially hidden)
+    axis_name_label = QLabel("Axis Name:")
+    axis_name_input = QLineEdit()
+    dimension_label = QLabel("Dimension:")
+    dimension_input = QLineEdit()
+
+    # Initially hide these inputs
+    axis_name_label.setVisible(False)
+    axis_name_input.setVisible(False)
+    dimension_label.setVisible(False)
+    dimension_input.setVisible(False)
+
+    layout.addWidget(axis_name_label)
+    layout.addWidget(axis_name_input)
+    layout.addWidget(dimension_label)
+    layout.addWidget(dimension_input)
+
     # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
     file_selector.files_data_updated.connect(update_file_paths)
@@ -411,7 +447,7 @@ def interactive_plot_type_selection_QT():
     # Execute the application
     app.exec_()
 
-    return plot_type, save_plot, save_data, x_min, x_max, file_data
+    return plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension
 
 class FileSelectorApp(QWidget):
     files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
@@ -539,7 +575,7 @@ def parse_arguments():
     else:
         if pyqt_available:
 
-            plot_type, save_plot, save_data, x_min, x_max, file_data = interactive_plot_type_selection_QT()
+            plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension = interactive_plot_type_selection_QT()
 
         else:
             save_plot = args.save_plot
@@ -548,7 +584,7 @@ def parse_arguments():
             x_max = args.x_max   
             plot_type = interactive_plot_type_selection_TK()
 
-    return plot_type, save_plot, save_data, x_min, x_max, file_data
+    return plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension
 
 
 if __name__ == "__main__":
@@ -559,7 +595,7 @@ if __name__ == "__main__":
 #         ["./BodyFitted/log.interFoam","BodyFitted"]      
 #    ]
       
-    plot_type, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
+    plot_type, save_plot, save_data, x_min, x_max, file_data, axis_name, dimension = parse_arguments()
 
     for file_info in file_data:
         print("File:", os.path.relpath(file_info[0]))
