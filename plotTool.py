@@ -179,15 +179,15 @@ def dynamic_plot(files, labels, fig_type, x_min, x_max, save_plot=False, save_da
         times, variables = times[:min_length], variables[:min_length]
 
         # # Apply shifts and scaling to each variable if needed
-        # shift_value=0
-        # scale_value=1       
-        # for i, var in enumerate(variables):
-        #     if i == 0 or i == 2: 
-        #         var = var / scale_value  # Apply scale        
-        #     if i == 0 or i == 2: 
-        #         var = var + shift_value  # Apply shift
-                
-        #     variables[i] = var
+        # if i == 0 or i== 1: //select file(s) to apply shift and scale
+        #     shift_value=0
+        #     scale_value=1       
+        #     for i, var in enumerate(variables):
+        #         if i == 0 or i == 2:  //select plot(s) to apply shift and scale
+        #             var = var / scale_value  # Apply scale        
+        #         if i == 0 or i == 2: 
+        #             var = var + shift_value  # Apply shift             
+        #         variables[i] = var
 
         parsed_data.append((times, variables))
     
@@ -235,22 +235,6 @@ def dynamic_plot(files, labels, fig_type, x_min, x_max, save_plot=False, save_da
             for i, var in enumerate(variables):
                 save_extracted_data(output_dir, label, figure_names[i], times, var)
             print(f"Data saved for {label} in {output_dir}")
-
-
-def interactive_file_selection_TK():
-    """
-    Open a file dialog to select files interactively and return the selected files
-    """
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    # Ask for corresponding Label
-    file_paths = []
-
-    # Open file dialog
-    file_paths = filedialog.askopenfilenames(title="Select Files", filetypes=[("All Files", "*.*")])
-
-    return file_paths
 
 def interactive_plot_type_selection_TK():
     root = tk.Tk()
@@ -503,14 +487,13 @@ def parse_arguments():
     # Parse known arguments first
     args = parser.parse_args()
 
-    save_plot = args.save_plot
-    save_data = args.save_data
-    x_min = args.x_min
-    x_max = args.x_max   
-
     # If Plot Type and no file are not provided, ask in interactive input
     if  args.plot_type and args.file_args:
         plot_type = args.plot_type
+        save_plot = args.save_plot
+        save_data = args.save_data
+        x_min = args.x_min
+        x_max = args.x_max   
 
         # Use argparse for standard file input
         file_data = []
@@ -533,6 +516,10 @@ def parse_arguments():
             plot_type, save_plot, save_data, x_min, x_max, file_data = interactive_plot_type_selection_QT()
 
         else:
+            save_plot = args.save_plot
+            save_data = args.save_data
+            x_min = args.x_min
+            x_max = args.x_max   
             plot_type = interactive_plot_type_selection_TK()
 
     return plot_type, save_plot, save_data, x_min, x_max, file_data
