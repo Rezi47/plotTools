@@ -30,7 +30,8 @@ def define_fig_type():
         'motion': extract_motion_values,
         'flux': extract_flux_values,
         'force': extract_force_values,
-        'interfaceHeight': extract_interfaceHeight_values
+        'interfaceHeight': extract_interfaceHeight_values,
+        'pressureProbe': extract_pressureProbe_values
     }
     return fig_type_mapping
           
@@ -64,6 +65,11 @@ def select_fig(fig_type):
             ["Amplitude (Gauge 5)", r'$m$'],
             ["Amplitude (Gauge 6)", r'$m$'],
             ["Amplitude (Gauge 7)", r'$m$']
+        ],
+        'pressureProbe': [
+            ["Pressure (Probe 1)", r'$kPa$'],
+            ["Pressure (Probe 2)", r'$kPa$'],
+            ["Pressure (Probe 3)", r'$kPa$']
         ]
     }       
 
@@ -72,6 +78,17 @@ def select_fig(fig_type):
     yAxis_dims = [entry[1] for entry in figures]
         
     return yAxis_name, yAxis_dims
+
+def extract_pressureProbe_values(file_path):
+    """
+    Reads data from the given file, skipping the first 5 comment lines and
+    extracting the Time (column 1) and the interfaceHeight values.
+    """
+    data = np.loadtxt(file_path, delimiter=None, skiprows=0, usecols=(1 ,2 ,3))
+    data=data.T
+    times = data[0]
+    variable_data = [data[1],data[2]]
+    return times, variable_data
 
 def extract_interfaceHeight_values(file_path):
     """
