@@ -41,8 +41,8 @@ def select_fig(fig_type):
     Parses a file to extract Time and variable data.
     """
     # Ensure dimension and axis_name are defined
-    dimension = dimension if 'dimension' in locals() else None
-    axis_name = axis_name if 'axis_name' in locals() else None
+    # dimension = dimension if 'dimension' in locals() else None
+    # axis_name = axis_name if 'axis_name' in locals() else None
     
     yAxis_list = {
         'motion': [
@@ -69,7 +69,7 @@ def select_fig(fig_type):
             [label, r'$kPa$'] for label in [f"Pressure (Probe {i})" for i in range(1, 10)]
         ],
          'generic': [
-            [label, fr"${dimension}$"] for label in [fr"{axis_name}" for i in range(1, 10)]
+            [label, fr"${axis_dim}$"] for label in [fr"{axis_title}" for i in range(1, 10)]
         ]
     }       
 
@@ -543,9 +543,9 @@ def parse_arguments():
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
-    parser.add_argument('-plot_type', '-pt',
-                    help=f"Specify the type of plot: {', '.join(fig_type_mapping.keys())}"
-                    )
+    parser.add_argument('-plot_type', '-pt', help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
+    parser.add_argument('-axis_title', '-ti', help=f"Specify a Title for y Axis")
+    parser.add_argument('-axis_dim', '-di', help=f"Specify a Dimension for y Axis")
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Disable saving the plot (default: False)")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Disable saving the data (default: False)")
     parser.add_argument('-x_min', type=float, help="Minimum x-axis value")
@@ -569,18 +569,19 @@ def parse_arguments():
 
         file_data.append((file_path, label))
 
-    return args.plot_type, args.save_plot, args.save_data, args.x_min, args.x_max, file_data
+    return args.plot_type,args.axis_title,args.axis_dim, args.save_plot, args.save_data, args.x_min, args.x_max, file_data
 
 
 if __name__ == "__main__":
     
-#    file_data = [
-#          # File, label
-#         ["./OverSet/log.interFoam","OverSet"],
-#         ["./BodyFitted/log.interFoam","BodyFitted"]      
-#    ]
-      
-    plot_type, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
+ #    file_data = [
+ #          # File, label
+ #         ["./OverSet/log.interFoam","OverSet"],
+ #         ["./BodyFitted/log.interFoam","BodyFitted"]      
+ #    ]
+
+
+    plot_type, axis_title, axis_dim, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
 
     if not plot_type or not file_data:
         if pyqt_available:
