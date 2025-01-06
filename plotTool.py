@@ -170,7 +170,7 @@ def extract_data(files, fig_type):
     
     return parsed_data
 
-def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max):
+def plot(parsed_data, labels, fig_type, x_min, x_max):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
@@ -213,7 +213,12 @@ def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max):
     plt.tight_layout()
     plt.show()
 
-def save_func(files, parsed_data, labels, fig_type, save_plot=False, save_data=False):
+    return fig
+
+def save_func(fig, files, parsed_data, labels, fig_type, save_plot=False, save_data=False):
+    """
+    Saves plots and extracted data for a given fig_type.
+    """
     figure_names, _ = select_fig(fig_type)
 
     # Save or show the plot
@@ -221,31 +226,25 @@ def save_func(files, parsed_data, labels, fig_type, save_plot=False, save_data=F
         output_dir = "."
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        plt.savefig(os.path.join(output_dir, f"{fig_type}_comparison.png"))
+        fig.savefig(os.path.join(output_dir, f"{fig_type}_comparison.png"))
         print(f"Figure saved to {output_dir}/{fig_type}_comparison.png")
-
 
     # Save extracted data if enabled
     if save_data:
         for file, (times, variables), label in zip(files, parsed_data, labels):
             base_dir = os.path.dirname(file)
             output_dir = os.path.join(base_dir, "extractedData")
-            for i, var in enumerate(variables):
-                save_extracted_data(output_dir, label, figure_names[i], times, var)
-            print(f"Data saved for {label} in {output_dir}")
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
 
-def save_extracted_data(directory, label, figure_name, times, data):
-    """
-    Saves extracted data to a file in the specified directory.
-    """
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    
-    file_path = os.path.join(directory, f"{label}_{figure_name}.csv")
-    with open(file_path, 'w') as f:
-        f.write(f"Time, {figure_name}\n")
-        for t, d in zip(times, data):
-            f.write(f"{t}, {d}\n")
+            for i, var in enumerate(variables):
+                figure_name = figure_names[i]
+                file_path = os.path.join(output_dir, f"{label}_{figure_name}.csv")
+                with open(file_path, 'w') as f:
+                    f.write(f"Time, {figure_name}\n")
+                    for t, d in zip(times, var):
+                        f.write(f"{t}, {d}\n")
+                print(f"Data saved for {label}: {file_path}")
             
 def interactive_plot_type_selection_TK():
     root = tk.Tk()
@@ -274,7 +273,6 @@ def interactive_plot_type_selection_TK():
     return plot_type
 
 def interactive_plot_type_selection_QT():
-    
     plot_type = None
     save_plot = False
     save_data = False
@@ -318,14 +316,6 @@ def interactive_plot_type_selection_QT():
     title_label.setAlignment(Qt.AlignCenter)
     title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
     layout.addWidget(title_label)
-
-    # # Buttons for each plot type with toggling functionality
-    # plot_buttons = {
-    #     "motion": QPushButton("motion"),
-    #     "flux": QPushButton("flux"),
-    #     "force": QPushButton("force"),
-    #     "interfaceHeight": QPushButton("interfaceHeight")
-    # }
 
     fig_type_mapping = define_fig_type()
 
@@ -490,13 +480,15 @@ class FileSelectorApp(QWidget):
         self.files_data_updated.emit(self.file_data)
     
 def parse_arguments():
+    fig_type_mapping = define_fig_type()
     parser = argparse.ArgumentParser(description="Process files with labels.")
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
     parser.add_argument('-plot_type', '-pt', type=str,
-                       help='Specify the type of plot (motion, flux, force, interfaceHeight)'
-                       )
+                    choices=fig_type_mapping.keys(),
+                    help=f"Specify the type of plot: {', '.join(fig_type_mapping.keys())}"
+                    )
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Disable saving the plot (default: False)")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Disable saving the data (default: False)")
     parser.add_argument('-x_min', type=float, help="Minimum x-axis value")
@@ -568,7 +560,7 @@ if __name__ == "__main__":
     # Parse data from all files
     parsed_data = extract_data(files, plot_type)
 
-    # Plot and save data
-    dynamic_plot(parsed_data, labels, plot_type, x_min, x_max)
+    # Generate the dynamic plot and get the figure object
+    fig = plot(parsed_data, labels, plot_type, x_min, x_max)
 
-    save_func(files, parsed_data, labels, plot_type, save_plot, save_data)
+    save_func(fig, files, parsed_data, labels, plot_type, save_plot, save_data)
