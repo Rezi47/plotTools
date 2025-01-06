@@ -31,7 +31,8 @@ def define_fig_type():
         'flux': extract_flux_values,
         'force': extract_force_values,
         'interfaceHeight': extract_interfaceHeight_values,
-        'pressureProbe': extract_pressureProbe_values
+        'pressureProbe': extract_pressureProbe_values,
+        'generic': extract_generic_values
     }
     return fig_type_mapping
           
@@ -58,18 +59,13 @@ def select_fig(fig_type):
             ["z-Force", r'$N$']
         ],
         'interfaceHeight': [
-            ["Amplitude (Gauge 1)", r'$m$'],
-            ["Amplitude (Gauge 2)", r'$m$'],
-            ["Amplitude (Gauge 3)", r'$m$'],
-            ["Amplitude (Gauge 4)", r'$m$'],
-            ["Amplitude (Gauge 5)", r'$m$'],
-            ["Amplitude (Gauge 6)", r'$m$'],
-            ["Amplitude (Gauge 7)", r'$m$']
+            [label, r'$m$'] for label in [f"Amplitude (Gauge {i})" for i in range(1, 10)]
         ],
         'pressureProbe': [
-            ["Pressure (Probe 1)", r'$kPa$'],
-            ["Pressure (Probe 2)", r'$kPa$'],
-            ["Pressure (Probe 3)", r'$kPa$']
+            [label, r'$kPa$'] for label in [f"Pressure (Probe {i})" for i in range(1, 10)]
+        ],
+         'generic': [
+            [label, r'$-$'] for label in [f"Data (Num {i})" for i in range(1, 10)]
         ]
     }       
 
@@ -78,6 +74,15 @@ def select_fig(fig_type):
     yAxis_dims = [entry[1] for entry in figures]
         
     return yAxis_name, yAxis_dims
+
+def extract_generic_values(file_path):
+    """
+    Reads data from the given file and generic values.
+    """
+    data = np.loadtxt(file_path, delimiter=None, skiprows=0)
+    times = data[:, 0]
+    variable_data = data[:, 1:].T
+    return times, variable_data
 
 def extract_pressureProbe_values(file_path):
     """
