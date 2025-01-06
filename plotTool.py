@@ -9,7 +9,11 @@ from io import StringIO
 import tkinter as tk
 try:
     from PyQt5.QtCore import Qt, pyqtSignal
-    from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, QFrame, QTextEdit
+    from PyQt5.QtWidgets import (
+    QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, 
+    QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, 
+    QFrame, QTextEdit
+    )
     import sys
     import os
     pyqt_available = True
@@ -21,7 +25,7 @@ except ImportError:
 
 app = QApplication(sys.argv)
 
-def define_fig_type_mapping():
+def define_fig_type():
     fig_type_mapping = {
         'motion': extract_motion_values,
         'flux': extract_flux_values,
@@ -29,15 +33,51 @@ def define_fig_type_mapping():
         'interfaceHeight': extract_interfaceHeight_values
     }
     return fig_type_mapping
+          
+def select_fig(fig_type):
+    """
+    Parses a file to extract Time and variable data.
+    """
+    yAxis_list = {
+        'motion': [
+            ["Heave", r"$cm$"],
+            ["Roll", r"$deg$"],
+            ["Surge", r"$cm$"],
+            ["Pitch", r"$deg$"],
+            ["Yaw", r"$deg$"],
+            ["Sway", r"$cm$"]
+        ],
+        'flux': [
+            ["Flux Net", r'$m^3/t$'],
+            ["Flux Abs", r'$m^3/t$']
+        ],
+        'force': [
+            ["x-Force", r'$N$'],
+            ["y-Force", r'$N$'],
+            ["z-Force", r'$N$']
+        ],
+        'interfaceHeight': [
+            ["Amplitude (Gauge 1)", r'$m$'],
+            ["Amplitude (Gauge 2)", r'$m$'],
+            ["Amplitude (Gauge 3)", r'$m$'],
+            ["Amplitude (Gauge 4)", r'$m$'],
+            ["Amplitude (Gauge 5)", r'$m$'],
+            ["Amplitude (Gauge 6)", r'$m$'],
+            ["Amplitude (Gauge 7)", r'$m$']
+        ]
+    }       
+
+    figures = yAxis_list.get(fig_type, [])    
+    yAxis_name = [entry[0] for entry in figures]
+    yAxis_dims = [entry[1] for entry in figures]
+        
+    return yAxis_name, yAxis_dims
 
 def extract_interfaceHeight_values(file_path):
     """
     Reads data from the given file, skipping the first 5 comment lines and
     extracting the Time (column 1) and the interfaceHeight values.
     """
-    # Returns the directory part of a path, handling both file and directory inputs
-    #file_path = file_path if os.path.isdir(file_path) else os.path.dirname(file_path)    
-    #file_path=f"{file_path}/postProcessing/interfaceHeight/0/height.dat"
     data = np.loadtxt(file_path, delimiter=None, skiprows=0, usecols=(0 ,1 ,3 ,5 ,7))
     data=data.T
     times = data[0]
@@ -49,9 +89,6 @@ def extract_force_values(file_path):
     Reads data from the given file, skipping the first 4 comment lines and
     extracting the Time (column 1) and the force values.
     """
-    # Returns the directory part of a path, handling both file and directory inputs
-    #file_path = file_path if os.path.isdir(file_path) else os.path.dirname(file_path)    
-    #file_path=f"{file_path}/postProcessing/forcesHull/0/force.dat"
     with open(file_path, "r") as infile:
         cleaned_data = "".join(line.replace("(", "").replace(")", "") for line in infile)
     cleaned_file = StringIO(cleaned_data)
@@ -66,9 +103,6 @@ def extract_flux_values(file_path):
     Reads data from the given file, skipping the first 5 comment lines and
     extracting the Time (column 1) and the flux values.
     """
-    # Returns the directory part of a path, handling both file and directory inputs
-    #file_path = file_path if os.path.isdir(file_path) else os.path.dirname(file_path)    
-    #file_path=f"{file_path}/postProcessing/fluxSummary/0/fl.dat"
     data = np.loadtxt(file_path, delimiter=None, skiprows=5, usecols=(0, 3, 4))
     data=data.T
     times = data[0]
@@ -111,7 +145,7 @@ def extract_data(files, fig_type):
     # for file in files:
     for i, file in enumerate(files):
 
-        fig_type_mapping = define_fig_type_mapping()
+        fig_type_mapping = define_fig_type()
 
         if fig_type in fig_type_mapping:
             times, variable_data = fig_type_mapping[fig_type](file)
@@ -123,64 +157,18 @@ def extract_data(files, fig_type):
         times, variable_data = times[:min_length], variable_data[:min_length]
 
         # # Apply shifts and scaling to each variable if needed
-        # if i == 0 or i== 1: //select file(s) to apply shift and scale
-        #     shift_value=0
-        #     scale_value=1       
-        #     for i, var in enumerate(variable_data):
-        #         if i == 0 or i == 2:  //select plot(s) to apply shift and scale
-        #             var = var / scale_value  # Apply scale        
-        #         if i == 0 or i == 2: 
-        #             var = var + shift_value  # Apply shift             
-        #         variable_data[i] = var
+        #shift_value=0
+        #scale_value=1       
+        #for i, var in enumerate(variable_data):
+    #         if i == 0 or i == 2:  //select plot(s) to apply shift and scale
+    #             var = var / scale_value  # Apply scale        
+    #         if i == 0 or i == 2: 
+    #             var = var + shift_value  # Apply shift             
+    #         variable_data[i] = var
 
         parsed_data.append((times, variable_data))
     
     return parsed_data
-          
-def select_fig(fig_type):
-    """
-    Parses a file to extract Time and variable data.
-    """
-    if fig_type == 'motion':
-        figures = [
-    	    # figure Name, Dimension
-    	    ["Heave", r"$cm$"  ],
-    	    ["Roll", r"$deg$"  ],
-    	    ["Surge" , r"$cm$" ],
-    	    ["Pitch", r"$deg$" ],
-    	    ["Yaw"  , r"$deg$" ],
-    	    ["Sway" , r"$cm$"  ]
-        ]	        
-    elif fig_type == 'flux':
-        figures = [
-    	    # figure Name, Dimension
-    	    ["Flux Net", r'$m^3/t$' ],
-    	    ["Flux Abs", r'$m^3/t$' ]
-        ]
-    elif fig_type == 'force':
-        figures = [
-    	    # figure Name, Dimension
-    	    ["x-Force", r'$N$' ],
-    	    ["y-Force", r'$N$' ],
-    	    ["z-Force", r'$N$' ]
-        ]
-    elif fig_type == 'interfaceHeight':
-        figures = [
-    	    # figure Name, Dimension
-    	    ["Amplitude (Gauge 1)", r'$m$' ],
-    	    ["Amplitude (Gauge 2)", r'$m$' ],
-    	    ["Amplitude (Gauge 3)", r'$m$' ],
-    	    ["Amplitude (Gauge 4)", r'$m$' ],
-    	    ["Amplitude (Gauge 5)", r'$m$' ],
-    	    ["Amplitude (Gauge 6)", r'$m$' ],
-    	    ["Amplitude (Gauge 7)", r'$m$' ]
-        ]         
-
-        
-    figure_names = [entry[0] for entry in figures]
-    dims = [entry[1] for entry in figures]
-        
-    return figure_names, dims
 
 def dynamic_plot(parsed_data, labels, fig_type, x_min, x_max):
     """
@@ -339,7 +327,7 @@ def interactive_plot_type_selection_QT():
     #     "interfaceHeight": QPushButton("interfaceHeight")
     # }
 
-    fig_type_mapping = define_fig_type_mapping()
+    fig_type_mapping = define_fig_type()
 
     plot_buttons = {key: QPushButton(key) for key in fig_type_mapping.keys()}
 
