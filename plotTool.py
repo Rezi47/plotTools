@@ -24,13 +24,6 @@ except ImportError:
     from tkinter import filedialog
 
 app = QApplication(sys.argv)
-
-def define_fig_type():
-    fig_type_mapping = {
-        'motion': extract_motion_values,
-        'function_object': extract_function_object_values,
-    }
-    return fig_type_mapping
           
 def extract_function_object_values(file_path):
     """
@@ -74,14 +67,16 @@ def extract_motion_values(file_path):
     variable_data = list(map(list, zip(*variable_data))) if variable_data else []
     return np.array(times), [np.array(var) for var in variable_data]
 
+fig_type_mapping = {
+        'motion': extract_motion_values,
+        'function_object': extract_function_object_values,
+    }
+
 def extract_data(files, fig_type):
     parsed_data = []
 
     # for file in files:
     for i, file in enumerate(files):
-
-        fig_type_mapping = define_fig_type()
-
         if fig_type in fig_type_mapping:
             times, variable_data = fig_type_mapping[fig_type](file)
         else:
@@ -279,8 +274,6 @@ def interactive_plot_type_selection_QT():
     title_label.setAlignment(Qt.AlignCenter)
     title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
     layout.addWidget(title_label)
-
-    fig_type_mapping = define_fig_type()
 
     plot_buttons = {key: QPushButton(key) for key in fig_type_mapping.keys()}
 
@@ -522,22 +515,21 @@ class FileSelectorApp(QWidget):
         self.files_data_updated.emit(self.file_data)
     
 def parse_arguments():
-    fig_type_mapping = define_fig_type()
     parser = argparse.ArgumentParser(description="Process files with labels.")
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
-    parser.add_argument('-plot_type', '-pt', help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
-    parser.add_argument('-axis_title', '-ti', help=f"Specify a Title for y Axis")
-    parser.add_argument('-axis_dim', '-di', help=f"Specify a Dimension for y Axis")
-    parser.add_argument('-skip_row', '-sr', type=int, default=0, help=f"Specify a Number to skip rows of files")
-    parser.add_argument('-cols', '-co', help=f"Specify columns numbers", default=None)
-    parser.add_argument('-save_plot', '-sp', action='store_true', help="Disable saving the plot (default: False)")
-    parser.add_argument('-save_data', '-sd', action='store_true', help="Disable saving the data (default: False)")
-    parser.add_argument('-x_min', type=float, help="Minimum x-axis value")
-    parser.add_argument('-x_max', type=float, help="Maximum x-axis value")
-    parser.add_argument('-scale', '-sc', default=1, type=float, help="Scale value")
-    parser.add_argument('-shift', '-sh', default=0, type=float, help="Shift value")  
+    parser.add_argument('-plot_type',   '-pt',                              help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
+    parser.add_argument('-axis_title',  '-ti',                              help="Specify a Title for y Axis")
+    parser.add_argument('-axis_dim',    '-di',                              help="Specify a Dimension for y Axis")
+    parser.add_argument('-skip_row',    '-sr',  default=0,      type=int,   help="Specify a Number to skip rows of files")
+    parser.add_argument('-cols',        '-co',  default=None,               help="Specify columns numbers")
+    parser.add_argument('-save_plot',   '-sp',  action='store_true',        help="Disable saving the plot (default: False)")
+    parser.add_argument('-save_data',   '-sd',  action='store_true',        help="Disable saving the data (default: False)")
+    parser.add_argument('-x_min',       '-xmi',                 type=float, help="Minimum x-axis value")
+    parser.add_argument('-x_max',       '-xma',                 type=float, help="Maximum x-axis value")
+    parser.add_argument('-scale',       '-sc',  default=1,      type=float, help="Scale value")
+    parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")  
 
     args = parser.parse_args()
 
