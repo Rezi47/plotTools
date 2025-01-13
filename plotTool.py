@@ -83,7 +83,8 @@ def extract_generic_values(file_path):
     """
     Reads data from the given file and generic values.
     """
-    data = np.loadtxt(file_path, delimiter=None, skiprows=0)
+    skip_row = 0
+    data = np.loadtxt(file_path, delimiter=None, skiprows=skip_row, usecols=usecols)
     times = data[:, 0]
     variable_data = data[:, 1:].T
     return times, variable_data
@@ -92,7 +93,7 @@ def extract_pressureProbe_values(file_path):
     """
     Reads data from the given file and pressureProbe values.
     """
-    data = np.loadtxt(file_path, delimiter=None, skiprows=0, usecols=(1 ,2 ,3))
+    data = np.loadtxt(file_path, delimiter=None, skiprows=0, usecols=(0,1 ,2 ,3))
     data=data.T
     times = data[0]
     variable_data = [data[1],data[2]]
@@ -303,9 +304,11 @@ def interactive_plot_type_selection_QT():
     file_data = []
     axis_title = None
     axis_dim = None
+    skip_row = None
+    usecols = None
 
     def update_values():
-        nonlocal plot_type, save_plot, save_data, x_min, x_max, axis_title, axis_dim
+        nonlocal plot_type, save_plot, save_data, x_min, x_max, axis_title, axis_dim, skip_row, usecols
         # Update the current values from the UI elements
         save_plot = save_plot_checkbox.isChecked()
         save_data = save_data_checkbox.isChecked()
@@ -316,6 +319,11 @@ def interactive_plot_type_selection_QT():
         if plot_type == 'generic':  # Assuming this is the name of the plot type
             axis_title = axis_title_input.text() if axis_title_input.text() else None
             axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
+            skip_row = skip_row_input.text() if skip_row_input.text() else None
+            usecols_text = usecols_input.text()
+            usecols = [int(col.strip()) for col in usecols_text.split(",") if col.strip().isdigit()]
+        
+
 
     def set_plot_type(plot_value):
         nonlocal plot_type
@@ -333,11 +341,19 @@ def interactive_plot_type_selection_QT():
             axis_title_input.setVisible(True)
             axis_dim_label.setVisible(True)
             axis_dim_input.setVisible(True)
+            skip_row_label.setVisible(True)
+            skip_row_input.setVisible(True)
+            usecols_label.setVisible(True)
+            usecols_input.setVisible(True)
         else:
             axis_title_label.setVisible(False)
             axis_title_input.setVisible(False)
             axis_dim_label.setVisible(False)
             axis_dim_input.setVisible(False)
+            skip_row_label.setVisible(False)
+            skip_row_input.setVisible(False)
+            usecols_label.setVisible(False)
+            usecols_input.setVisible(False)
 
     def plot_button_clicked():
         # Update values before closing the window
@@ -377,17 +393,29 @@ def interactive_plot_type_selection_QT():
     axis_title_input = QLineEdit()
     axis_dim_label = QLabel("Dimension:")
     axis_dim_input = QLineEdit()
+    skip_row_label = QLabel("Skip rows:")
+    skip_row_input = QLineEdit()
+    usecols_label = QLabel("Usecols (e.g., 1,2,3):")
+    usecols_input = QLineEdit()
 
     # Initially hide these inputs
     axis_title_label.setVisible(False)
     axis_title_input.setVisible(False)
     axis_dim_label.setVisible(False)
     axis_dim_input.setVisible(False)
+    skip_row_label.setVisible(False)
+    skip_row_input.setVisible(False)
+    usecols_label.setVisible(False)
+    usecols_input.setVisible(False)
 
     layout.addWidget(axis_title_label)
     layout.addWidget(axis_title_input)
     layout.addWidget(axis_dim_label)
     layout.addWidget(axis_dim_input)
+    layout.addWidget(skip_row_label)
+    layout.addWidget(skip_row_input)
+    layout.addWidget(usecols_label)
+    layout.addWidget(usecols_input)
 
     # Add checkboxes for "Save Plot" and "Save Data" in the same row
     save_layout = QHBoxLayout()
@@ -451,7 +479,7 @@ def interactive_plot_type_selection_QT():
     # Execute the application
     app.exec_()
 
-    return plot_type,axis_title, axis_dim, save_plot, save_data, x_min, x_max, file_data
+    return plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, file_data
 
 class FileSelectorApp(QWidget):
     files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
@@ -546,13 +574,19 @@ def parse_arguments():
     parser.add_argument('-plot_type', '-pt', help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
     parser.add_argument('-axis_title', '-ti', help=f"Specify a Title for y Axis")
     parser.add_argument('-axis_dim', '-di', help=f"Specify a Dimension for y Axis")
+    parser.add_argument('-skip_row', '-sr', help=f"Specify a Number to skip rows of files")
+    parser.add_argument('-cols', '-co', help=f"Specify columns numbers", default=None)
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Disable saving the plot (default: False)")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Disable saving the data (default: False)")
     parser.add_argument('-x_min', type=float, help="Minimum x-axis value")
     parser.add_argument('-x_max', type=float, help="Maximum x-axis value")
-
-    # Parse known arguments first
+    
     args = parser.parse_args()
+
+    if args.cols:
+        usecols = [int(col.strip()) for col in args.cols.split(",") if col.strip().isdigit()]
+    else:
+        usecols = None
 
     # Use argparse for standard file input
     file_data = []
@@ -569,7 +603,7 @@ def parse_arguments():
 
         file_data.append((file_path, label))
 
-    return args.plot_type,args.axis_title,args.axis_dim, args.save_plot, args.save_data, args.x_min, args.x_max, file_data
+    return args.plot_type,args.axis_title,args.axis_dim, args.skip_row, usecols, args.save_plot, args.save_data, args.x_min, args.x_max, file_data
 
 
 if __name__ == "__main__":
@@ -580,12 +614,11 @@ if __name__ == "__main__":
  #         ["./BodyFitted/log.interFoam","BodyFitted"]      
  #    ]
 
-    plot_type, axis_title, axis_dim, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
+    plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
 
     if not plot_type or not file_data:
         if pyqt_available:
-            plot_type, axis_title, axis_dim, save_plot, save_data, x_min, x_max, file_data = interactive_plot_type_selection_QT()
-            print(f"axis_title: {axis_title}")
+            plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, file_data = interactive_plot_type_selection_QT()
         else: 
             plot_type = interactive_plot_type_selection_TK()
             
@@ -594,8 +627,11 @@ if __name__ == "__main__":
         print("Label:", file_info[1])
         print()
     print(f"Plot type: {plot_type}")
-    print(f"Axis title: {axis_title}")
-    print(f"Axis Dimension: {axis_dim}")
+    if plot_type == "generic":
+        print(f"Axis title: {axis_title}")
+        print(f"Axis Dimension: {axis_dim}")
+        print(f"Skiped rows: {skip_row}")
+        print(f"Used columns: {usecols}")
     print(f"Save Plot: {save_plot}")
     print(f"Save Data: {save_data}")
     print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
