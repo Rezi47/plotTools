@@ -323,8 +323,6 @@ def interactive_plot_type_selection_QT():
             usecols_text = usecols_input.text()
             usecols = [int(col.strip()) for col in usecols_text.split(",") if col.strip().isdigit()]
         
-
-
     def set_plot_type(plot_value):
         nonlocal plot_type
         plot_type = plot_value
@@ -354,6 +352,8 @@ def interactive_plot_type_selection_QT():
             skip_row_input.setVisible(False)
             usecols_label.setVisible(False)
             usecols_input.setVisible(False)
+        
+        window.adjustSize()
 
     def plot_button_clicked():
         # Update values before closing the window
@@ -382,40 +382,59 @@ def interactive_plot_type_selection_QT():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
         layout.addWidget(button)
 
-    # Add the first horizontal line separator
-    line1 = QFrame()
-    line1.setFrameShape(QFrame.HLine)
-    line1.setFrameShadow(QFrame.Sunken)
-    layout.addWidget(line1)
-
-    # Add "Axis Name" and "Dimension" fields right after the plot type buttons
-    axis_title_label = QLabel("Axis Title:")
+    # Add some fields right after the plot type buttons
+    axis_layout = QHBoxLayout()
+    axis_title_label = QLabel("Axis title:")
     axis_title_input = QLineEdit()
     axis_dim_label = QLabel("Dimension:")
     axis_dim_input = QLineEdit()
-    skip_row_label = QLabel("Skip rows:")
-    skip_row_input = QLineEdit()
-    usecols_label = QLabel("Usecols (e.g., 1,2,3):")
-    usecols_input = QLineEdit()
+
+    # Add widgets to the horizontal layout
+    axis_layout.addWidget(axis_title_label)
+    axis_layout.addWidget(axis_title_input)
+    axis_layout.addSpacing(20)  # Add some space between inputs for better visual separation
+    axis_layout.addWidget(axis_dim_label)
+    axis_layout.addWidget(axis_dim_input)
 
     # Initially hide these inputs
     axis_title_label.setVisible(False)
     axis_title_input.setVisible(False)
     axis_dim_label.setVisible(False)
     axis_dim_input.setVisible(False)
+
+    layout.addLayout(axis_layout)
+
+    # Add "Skip Row" and "Usecols" fields in the same row
+    data_layout = QHBoxLayout()
+    skip_row_label = QLabel("Skip rows:")
+    skip_row_input = QLineEdit()
+    usecols_label = QLabel("Used columns:")
+    usecols_input = QLineEdit()
+    usecols_input.setPlaceholderText("e.g., 0,1,2,4")
+
+    # Set fixed width for skip_row_input to allow 3-digit numbers
+    skip_row_input.setFixedWidth(50)
+
+    # Add widgets to the horizontal layout
+    data_layout.addWidget(skip_row_label)
+    data_layout.addWidget(skip_row_input)
+    data_layout.addSpacing(70)  # Add space to align usecols label with the Dimension label
+    data_layout.addWidget(usecols_label)
+    data_layout.addWidget(usecols_input)
+
+    # Initially hide these inputs
     skip_row_label.setVisible(False)
     skip_row_input.setVisible(False)
     usecols_label.setVisible(False)
     usecols_input.setVisible(False)
 
-    layout.addWidget(axis_title_label)
-    layout.addWidget(axis_title_input)
-    layout.addWidget(axis_dim_label)
-    layout.addWidget(axis_dim_input)
-    layout.addWidget(skip_row_label)
-    layout.addWidget(skip_row_input)
-    layout.addWidget(usecols_label)
-    layout.addWidget(usecols_input)
+    layout.addLayout(data_layout)
+
+    # Add the first horizontal line separator
+    line1 = QFrame()
+    line1.setFrameShape(QFrame.HLine)
+    line1.setFrameShadow(QFrame.Sunken)
+    layout.addWidget(line1)
 
     # Add checkboxes for "Save Plot" and "Save Data" in the same row
     save_layout = QHBoxLayout()
@@ -439,14 +458,15 @@ def interactive_plot_type_selection_QT():
     x_max_label = QLabel("x max:")
     x_max_input = QLineEdit()
 
-    # Set fixed width for input boxes
-    x_min_input.setFixedWidth(50)
-    x_max_input.setFixedWidth(50)
-
+    # Add spacing between the labels and inputs
     x_layout.addWidget(x_min_label)
     x_layout.addWidget(x_min_input)
+    x_layout.addStretch()  # Add a spacer
     x_layout.addWidget(x_max_label)
     x_layout.addWidget(x_max_input)
+
+    # Align elements in the row
+    x_layout.setAlignment(Qt.AlignLeft)
     layout.addLayout(x_layout)
 
     # Add the third horizontal line separator
@@ -626,6 +646,7 @@ if __name__ == "__main__":
         print("File:", os.path.relpath(file_info[0]))
         print("Label:", file_info[1])
         print()
+    
     print(f"Plot type: {plot_type}")
     if plot_type == "generic":
         print(f"Axis title: {axis_title}")
