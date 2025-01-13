@@ -28,84 +28,20 @@ app = QApplication(sys.argv)
 def define_fig_type():
     fig_type_mapping = {
         'motion': extract_motion_values,
-        'flux': extract_flux_values,
-        'force': extract_force_values,
-        'interfaceHeight': extract_interfaceHeight_values,
-        'pressureProbe': extract_pressureProbe_values,
-        'generic': extract_generic_values
+        'function_object': extract_function_object_values,
     }
     return fig_type_mapping
           
-def select_fig(fig_type):
+def extract_function_object_values(file_path):
     """
-    Parses a file to extract Time and variable data.
-    """   
-    fig_list = {
-        'motion': ["Heave", "m"],
-        'flux': ["Flux Net", "m^3/t"],
-        'force': ["Force", "N"],
-        'interfaceHeight': ["Amplitude", "m"],
-        'pressureProbe': ["Pressure", "kPa"],
-        'generic': ["Amplitude", "-"]
-    }       
-
-    figure_inf = fig_list.get(fig_type, [])    
-    fig_name = figure_inf[0]
-    dim = figure_inf[1]
-        
-    return fig_name, dim
-
-def extract_generic_values(file_path):
-    """
-    Reads data from the given file and generic values.
-    """
-    skip_row = 0
-    data = np.loadtxt(file_path, delimiter=None, skiprows=skip_row, usecols=usecols)
-    times = data[:, 0]
-    variable_data = data[:, 1:].T
-    return times, variable_data
-
-def extract_pressureProbe_values(file_path):
-    """
-    Reads data from the given file and pressureProbe values.
-    """
-    data = np.loadtxt(file_path, delimiter=None, skiprows=0, usecols=(0,1 ,2 ,3))
-    data=data.T
-    times = data[0]
-    variable_data = [data[1],data[2]]
-    return times, variable_data
-
-def extract_interfaceHeight_values(file_path):
-    """
-    Reads data from the given file and interfaceHeight values.
-    """
-    data = np.loadtxt(file_path, delimiter=None, skiprows=0, usecols=(0 ,1 ,3 ,5 ,7))
-    data=data.T
-    times = data[0]
-    variable_data = [data[1],data[2],data[3],data[4]]
-    return times, variable_data
-    
-def extract_force_values(file_path):
-    """
-    Reads data from the given file and force values.
+    Reads data from the given file and function_object values.
     """
     with open(file_path, "r") as infile:
         cleaned_data = "".join(line.replace("(", "").replace(")", "") for line in infile)
     cleaned_file = StringIO(cleaned_data)
-    data = np.loadtxt(cleaned_file, delimiter=None, skiprows=4, usecols=(0, 1, 2, 3))
-    data=data.T
-    times = data[0]
-    variable_data = [data[1],data[2],data[3]]
-    return times, variable_data
-
-def extract_flux_values(file_path):
-    """
-    Reads data from the given file and flux values.
-    """
-    data = np.loadtxt(file_path, delimiter=None, skiprows=5, usecols=(0, 3, 4))
-    data=data.T
-    times = data[0]
-    variable_data = [data[1],data[2]]
+    data = np.loadtxt(cleaned_file, delimiter=None, skiprows=skip_row, usecols=usecols)
+    times = data[:, 0]
+    variable_data = data[:, 1:].T
     return times, variable_data
                 
 def extract_motion_values(file_path):
@@ -293,9 +229,9 @@ def interactive_plot_type_selection_QT():
         axis_title_input.setText("Amp.")
         axis_dim_input.setText("-")
 
-        # Capture axis name and axis_dim if "Generic Bottom" is selected
-        if plot_type == 'generic':  # Assuming this is the name of the plot type
-            skip_row = skip_row_input.text() if skip_row_input.text() else None
+        # Capture axis name and axis_dim if "function_object Bottom" is selected
+        if plot_type == 'function_object':  # Assuming this is the name of the plot type
+            skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
             usecols_text = usecols_input.text()
             usecols = [int(col.strip()) for col in usecols_text.split(",") if col.strip().isdigit()]
 
@@ -309,8 +245,8 @@ def interactive_plot_type_selection_QT():
             button.setStyleSheet('background-color: none')  # Reset all buttons
         plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
 
-        # Dynamically add fields for "Axis Title" and "Dimension" if "generic" is selected
-        if plot_value == 'generic':
+        # Dynamically add fields for "Axis Title" and "Dimension" if "function_object" is selected
+        if plot_value == 'function_object':
             skip_row_label.setVisible(True)
             skip_row_input.setVisible(True)
             usecols_label.setVisible(True)
@@ -372,7 +308,7 @@ def interactive_plot_type_selection_QT():
     skip_row_input = QLineEdit()
     usecols_label = QLabel("Used columns:")
     usecols_input = QLineEdit()
-    usecols_input.setPlaceholderText("e.g., 0,1,2,4")
+    usecols_input.setPlaceholderText("0,1,2,4")
 
     # Set fixed width for skip_row_input to allow 3-digit numbers
     skip_row_input.setFixedWidth(50)
@@ -556,7 +492,7 @@ def parse_arguments():
     parser.add_argument('-plot_type', '-pt', help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
     parser.add_argument('-axis_title', '-ti', help=f"Specify a Title for y Axis")
     parser.add_argument('-axis_dim', '-di', help=f"Specify a Dimension for y Axis")
-    parser.add_argument('-skip_row', '-sr', help=f"Specify a Number to skip rows of files")
+    parser.add_argument('-skip_row', '-sr', type=int, default=0, help=f"Specify a Number to skip rows of files")
     parser.add_argument('-cols', '-co', help=f"Specify columns numbers", default=None)
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Disable saving the plot (default: False)")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Disable saving the data (default: False)")
@@ -604,14 +540,15 @@ if __name__ == "__main__":
         print()
     
     print(f"Plot type: {plot_type}")
-    if plot_type == "generic":
+    if plot_type == "function_object":
         print(f"Axis title: {axis_title}")
         print(f"Axis Dimension: {axis_dim}")
         print(f"Skiped rows: {skip_row}")
         print(f"Used columns: {usecols}")
     print(f"Save Plot: {save_plot}")
     print(f"Save Data: {save_data}")
-    print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
+    if x_min or x_max:
+        print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
     print()
 
     files = [entry[0] for entry in file_data]    
