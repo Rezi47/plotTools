@@ -39,45 +39,21 @@ def define_fig_type():
 def select_fig(fig_type):
     """
     Parses a file to extract Time and variable data.
-    """
-    # Ensure axis_dim and axis_title are defined
-    # axis_dim = axis_dim if 'axis_dim' in locals() else None
-    # axis_title = axis_title if 'axis_title' in locals() else None
-    
-    yAxis_list = {
-        'motion': [
-            ["Heave", r"$cm$"],
-            ["Roll", r"$deg$"],
-            ["Surge", r"$cm$"],
-            ["Pitch", r"$deg$"],
-            ["Yaw", r"$deg$"],
-            ["Sway", r"$cm$"]
-        ],
-        'flux': [
-            ["Flux Net", r'$m^3/t$'],
-            ["Flux Abs", r'$m^3/t$']
-        ],
-        'force': [
-            ["x-Force", r'$N$'],
-            ["y-Force", r'$N$'],
-            ["z-Force", r'$N$']
-        ],
-        'interfaceHeight': [
-            [label, r'$m$'] for label in [f"Amplitude (Gauge {i})" for i in range(1, 10)]
-        ],
-        'pressureProbe': [
-            [label, r'$kPa$'] for label in [f"Pressure (Probe {i})" for i in range(1, 10)]
-        ],
-         'generic': [
-            [label, fr"${axis_dim}$"] for label in [fr"{axis_title} {i}" for i in range(1, 10)]
-        ]
+    """   
+    fig_list = {
+        'motion': ["Heave", "m"],
+        'flux': ["Flux Net", "m^3/t"],
+        'force': ["Force", "N"],
+        'interfaceHeight': ["Amplitude", "m"],
+        'pressureProbe': ["Pressure", "kPa"],
+        'generic': ["Amplitude", "-"]
     }       
 
-    figures = yAxis_list.get(fig_type, [])    
-    yAxis_name = [entry[0] for entry in figures]
-    yAxis_dims = [entry[1] for entry in figures]
+    figure_inf = fig_list.get(fig_type, [])    
+    fig_name = figure_inf[0]
+    dim = figure_inf[1]
         
-    return yAxis_name, yAxis_dims
+    return fig_name, dim
 
 def extract_generic_values(file_path):
     """
@@ -193,15 +169,14 @@ def extract_data(files, fig_type):
     
     return parsed_data
 
-def plot(parsed_data, labels, fig_type, x_min, x_max):
+def plot(parsed_data, labels, x_min, x_max):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
 
     colors = ['b', 'r', 'g', 'c', 'm', 'y']  # color cycle
     linestyles = ['-', '--', ':', '-.']  # linestyle cycle
-    figure_names, dims = select_fig(fig_type)
- 
+
     # Maximum length of variable_data
     max_num_variables = 0
     for item in parsed_data:
@@ -223,9 +198,9 @@ def plot(parsed_data, labels, fig_type, x_min, x_max):
             axs[i].plot(times, variables[i], label=label, linestyle=linestyle, linewidth=1, color=color)
         
         # Set subplot titles and labels
-        axs[i].set_title(figure_names[i])       
+        axs[i].set_title(f"{axis_title} {i+1}")       
         axs[i].set_xlabel(r"t ($s$)")
-        axs[i].set_ylabel(f"{figure_names[i]} ({dims[i]})")
+        axs[i].set_ylabel(fr"{axis_title} (${axis_dim}$)")
         axs[i].set_xlim(
             left=x_min if x_min is not None else axs[i].get_xlim()[0],
             right=x_max if x_max is not None else axs[i].get_xlim()[1]
@@ -242,8 +217,6 @@ def save_func(fig, files, parsed_data, labels, fig_type, save_plot=False, save_d
     """
     Saves plots and extracted data for a given fig_type.
     """
-    figure_names, _ = select_fig(fig_type)
-
     # Save or show the plot
     if save_plot:
         output_dir = "."
@@ -261,10 +234,9 @@ def save_func(fig, files, parsed_data, labels, fig_type, save_plot=False, save_d
                 os.makedirs(output_dir)
 
             for i, var in enumerate(variables):
-                figure_name = figure_names[i]
-                file_path = os.path.join(output_dir, f"{label}_{figure_name}.csv")
+                file_path = os.path.join(output_dir, f"{label}_{axis_title}_{i}.csv")
                 with open(file_path, 'w') as f:
-                    f.write(f"Time, {figure_name}\n")
+                    f.write(f"Time, {axis_title}\n")
                     for t, d in zip(times, var):
                         f.write(f"{t}, {d}\n")
                 print(f"Data saved for {label}: {file_path}")
@@ -314,15 +286,19 @@ def interactive_plot_type_selection_QT():
         save_data = save_data_checkbox.isChecked()
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
+        axis_title = axis_title_input.text() if axis_title_input.text() else None
+        axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
         
+        #fig_name, dim = select_fig(plot_type)
+        axis_title_input.setText("Amp.")
+        axis_dim_input.setText("-")
+
         # Capture axis name and axis_dim if "Generic Bottom" is selected
         if plot_type == 'generic':  # Assuming this is the name of the plot type
-            axis_title = axis_title_input.text() if axis_title_input.text() else None
-            axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
             skip_row = skip_row_input.text() if skip_row_input.text() else None
             usecols_text = usecols_input.text()
             usecols = [int(col.strip()) for col in usecols_text.split(",") if col.strip().isdigit()]
-        
+
     def set_plot_type(plot_value):
         nonlocal plot_type
         plot_type = plot_value
@@ -335,19 +311,11 @@ def interactive_plot_type_selection_QT():
 
         # Dynamically add fields for "Axis Title" and "Dimension" if "generic" is selected
         if plot_value == 'generic':
-            axis_title_label.setVisible(True)
-            axis_title_input.setVisible(True)
-            axis_dim_label.setVisible(True)
-            axis_dim_input.setVisible(True)
             skip_row_label.setVisible(True)
             skip_row_input.setVisible(True)
             usecols_label.setVisible(True)
             usecols_input.setVisible(True)
         else:
-            axis_title_label.setVisible(False)
-            axis_title_input.setVisible(False)
-            axis_dim_label.setVisible(False)
-            axis_dim_input.setVisible(False)
             skip_row_label.setVisible(False)
             skip_row_input.setVisible(False)
             usecols_label.setVisible(False)
@@ -395,12 +363,6 @@ def interactive_plot_type_selection_QT():
     axis_layout.addSpacing(20)  # Add some space between inputs for better visual separation
     axis_layout.addWidget(axis_dim_label)
     axis_layout.addWidget(axis_dim_input)
-
-    # Initially hide these inputs
-    axis_title_label.setVisible(False)
-    axis_title_input.setVisible(False)
-    axis_dim_label.setVisible(False)
-    axis_dim_input.setVisible(False)
 
     layout.addLayout(axis_layout)
 
@@ -627,12 +589,6 @@ def parse_arguments():
 
 
 if __name__ == "__main__":
-    
- #    file_data = [
- #          # File, label
- #         ["./OverSet/log.interFoam","OverSet"],
- #         ["./BodyFitted/log.interFoam","BodyFitted"]      
- #    ]
 
     plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
 
@@ -665,6 +621,6 @@ if __name__ == "__main__":
     parsed_data = extract_data(files, plot_type)
 
     # Generate the dynamic plot and get the figure object
-    fig = plot(parsed_data, labels, plot_type, x_min, x_max)
+    fig = plot(parsed_data, labels, x_min, x_max)
 
     save_func(fig, files, parsed_data, labels, plot_type, save_plot, save_data)
