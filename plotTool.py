@@ -32,7 +32,7 @@ def extract_function_object_values(file_path):
     with open(file_path, "r") as infile:
         cleaned_data = "".join(line.replace("(", "").replace(")", "") for line in infile)
     cleaned_file = StringIO(cleaned_data)
-    data = np.loadtxt(cleaned_file, delimiter=None, skiprows=skip_row, usecols=usecols)
+    data = np.loadtxt(cleaned_file, delimiter=None, skiprows=skip_row, usecols=(usecols))
     times = data[:, 0]
     variable_data = data[:, 1:].T
     return times, variable_data
@@ -229,8 +229,8 @@ def interactive_plot_type_selection_QT():
         # Capture axis name and axis_dim if "function_object Bottom" is selected
         if plot_type == 'function_object':  # Assuming this is the name of the plot type
             skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
-            usecols_text = usecols_input.text()
-            usecols = [int(col.strip()) for col in usecols_text.split(",") if col.strip().isdigit()]
+            usecols_text = usecols_input.text()           
+            usecols = [int(col) for col in usecols_text.split(",") if col.strip().isdigit()] if usecols_text else None
 
     def set_plot_type(plot_value):
         nonlocal plot_type
@@ -265,6 +265,12 @@ def interactive_plot_type_selection_QT():
         nonlocal file_data  # Use nonlocal to modify the variable
         file_data = file_paths
         
+    def create_horizontal_line():
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        return line
+    
     window = QWidget()
     window.setWindowTitle("Plot Setting")
     layout = QVBoxLayout()
@@ -323,38 +329,28 @@ def interactive_plot_type_selection_QT():
 
     layout.addLayout(data_layout)
 
-    # Add the first horizontal line separator
-    line1 = QFrame()
-    line1.setFrameShape(QFrame.HLine)
-    line1.setFrameShadow(QFrame.Sunken)
-    layout.addWidget(line1)
+    ########### Add the 1st horizontal line separator ###########
+    layout.addWidget(create_horizontal_line())
 
-    # Add checkboxes for "Save Plot" and "Save Data" in the same row
-    save_layout = QHBoxLayout()
-    save_plot_checkbox = QCheckBox("Save Plot")
-    save_data_checkbox = QCheckBox("Save Data")
-    save_layout.addWidget(save_plot_checkbox)
-    save_layout.addWidget(save_data_checkbox)
-    save_layout.setAlignment(Qt.AlignLeft)  # Align checkboxes to the left
-    layout.addLayout(save_layout)
+    s_layout = QHBoxLayout()
+    scale_label = QLabel("Scale:")
+    scale_input = QLineEdit()
+    shift_label = QLabel("Shift:")
+    shift_input = QLineEdit()
 
-    # Add a QLabel for the "hey" text, initially hidden
-    save_plot_text_label = QLabel("Figure will be saved to ./function_object_comparison.png")
-    save_plot_text_label.setVisible(False)  # Hide initially
-    layout.addWidget(save_plot_text_label)
-    save_data_text_label = QLabel("Extracted data will be saved to /extractedData/")
-    save_data_text_label.setVisible(False)  # Hide initially
-    layout.addWidget(save_data_text_label)
+    # Add spacing between the labels and inputs
+    s_layout.addWidget(scale_label)
+    s_layout.addWidget(scale_input)
+    s_layout.addStretch()  # Add a spacer
+    s_layout.addWidget(shift_label)
+    s_layout.addWidget(shift_input)
 
-    # Connect the save_plot_checkbox to show/hide the "hey" text
-    save_plot_checkbox.toggled.connect(lambda checked: save_plot_text_label.setVisible(checked))
-    save_data_checkbox.toggled.connect(lambda checked: save_data_text_label.setVisible(checked))
+    # Align elements in the row
+    s_layout.setAlignment(Qt.AlignLeft)
+    layout.addLayout(s_layout)
 
-    # Add the second horizontal line separator
-    line2 = QFrame()
-    line2.setFrameShape(QFrame.HLine)
-    line2.setFrameShadow(QFrame.Sunken)
-    layout.addWidget(line2)
+    ########### Add the 2nd horizontal line separator ###########
+    layout.addWidget(create_horizontal_line())
 
     # Add input fields for "x min" and "x max" in the same row
     x_layout = QHBoxLayout()
@@ -374,45 +370,56 @@ def interactive_plot_type_selection_QT():
     x_layout.setAlignment(Qt.AlignLeft)
     layout.addLayout(x_layout)
 
-    # Add the third horizontal line separator
-    line3 = QFrame()
-    line3.setFrameShape(QFrame.HLine)
-    line3.setFrameShadow(QFrame.Sunken)
-    layout.addWidget(line3)
+    ########### Add the 3rd horizontal line separator ###########
+    layout.addWidget(create_horizontal_line())
 
     # Add input fields for "x min" and "x max" in the same row
-    s_layout = QHBoxLayout()
-    scale_label = QLabel("Scale:")
-    scale_input = QLineEdit()
-    shift_label = QLabel("Shift:")
-    shift_input = QLineEdit()
+    # Add checkboxes for "Save Plot" and "Save Data" in separate rows
+    save_plot_layout = QHBoxLayout()
+    save_plot_checkbox = QCheckBox("Save Plot")
+    save_plot_text_label = QLabel(" Figure will be saved in ./function_object_comparison.png")
+    save_plot_text_label.setStyleSheet("color: gray;")  # Make text gray
+    save_plot_text_label.setVisible(False)  # Hide initially
+    save_plot_layout.addWidget(save_plot_checkbox)
+    save_plot_layout.addWidget(save_plot_text_label)
+    save_plot_layout.setAlignment(Qt.AlignLeft)  # Align to the left
+    layout.addLayout(save_plot_layout)
 
-    # Add spacing between the labels and inputs
-    s_layout.addWidget(scale_label)
-    s_layout.addWidget(scale_input)
-    s_layout.addStretch()  # Add a spacer
-    s_layout.addWidget(shift_label)
-    s_layout.addWidget(shift_input)
+    save_data_layout = QHBoxLayout()
+    save_data_checkbox = QCheckBox("Save Data")
+    save_data_text_label = QLabel(" Extracted data will be saved in /extractedData/")
+    save_data_text_label.setStyleSheet("color: gray;")  # Make text gray
+    save_data_text_label.setVisible(False)  # Hide initially
+    save_data_layout.addWidget(save_data_checkbox)
+    save_data_layout.addWidget(save_data_text_label)
+    save_data_layout.setAlignment(Qt.AlignLeft)  # Align to the left
+    layout.addLayout(save_data_layout)
 
-    # Align elements in the row
-    s_layout.setAlignment(Qt.AlignLeft)
-    layout.addLayout(s_layout)
+    # Connect the checkboxes to show/hide the gray text
+    save_plot_checkbox.toggled.connect(lambda checked: save_plot_text_label.setVisible(checked))
+    save_data_checkbox.toggled.connect(lambda checked: save_data_text_label.setVisible(checked))
 
-    # Add the forth horizontal line separator
-    line3 = QFrame()
-    line3.setFrameShape(QFrame.HLine)
-    line3.setFrameShadow(QFrame.Sunken)
-    layout.addWidget(line3)
-    
+    ########### Add the 4th horizontal line separator ###########
+    layout.addWidget(create_horizontal_line())
+  
     # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
     file_selector.files_data_updated.connect(update_file_paths)
     layout.addWidget(file_selector)
 
     # Add the final "Plot" button to execute selection
-    plot_button = QPushButton("Plot")
+    plot_button = QPushButton("🖨️Plot")
     plot_button.clicked.connect(plot_button_clicked)
-    layout.addWidget(plot_button)
+    plot_button.setFixedSize(120, 40)
+    plot_button.setStyleSheet("""
+    font-size: 15px;              /* Increase font size */
+    font-weight: bold;           /* Make the text bold */
+    padding: 3px;                /* Add internal padding for better spacing */
+    color: white;                /* Set text color */
+    background-color: #007BFF;   /* Set button background color (Bootstrap primary blue) */
+    border-radius: 3px;         /* Add rounded corners */
+    """)
+    layout.addWidget(plot_button, alignment=Qt.AlignCenter)
 
     # Set the layout and show the window
     window.setLayout(layout)
@@ -520,8 +527,8 @@ def parse_arguments():
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
     parser.add_argument('-plot_type',   '-pt',                              help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
-    parser.add_argument('-axis_title',  '-ti',                              help="Specify a Title for y Axis")
-    parser.add_argument('-axis_dim',    '-di',                              help="Specify a Dimension for y Axis")
+    parser.add_argument('-axis_title',  '-at',                              help="Specify a Title for y Axis")
+    parser.add_argument('-axis_dim',    '-ad',                              help="Specify a Dimension for y Axis")
     parser.add_argument('-skip_row',    '-sr',  default=0,      type=int,   help="Specify a Number to skip rows of files")
     parser.add_argument('-cols',        '-co',  default=None,               help="Specify columns numbers")
     parser.add_argument('-save_plot',   '-sp',  action='store_true',        help="Disable saving the plot (default: False)")
@@ -533,10 +540,7 @@ def parse_arguments():
 
     args = parser.parse_args()
 
-    if args.cols:
-        usecols = [int(col.strip()) for col in args.cols.split(",") if col.strip().isdigit()]
-    else:
-        usecols = None
+    usecols = [int(col) for col in args.cols.split(",") if col.strip().isdigit()] if args.cols else None
 
     # Use argparse for standard file input
     file_data = []
