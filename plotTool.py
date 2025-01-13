@@ -345,6 +345,18 @@ def interactive_plot_type_selection_QT():
     save_layout.setAlignment(Qt.AlignLeft)  # Align checkboxes to the left
     layout.addLayout(save_layout)
 
+    # Add a QLabel for the "hey" text, initially hidden
+    save_plot_text_label = QLabel("Figure will be saved to ./function_object_comparison.png")
+    save_plot_text_label.setVisible(False)  # Hide initially
+    layout.addWidget(save_plot_text_label)
+    save_data_text_label = QLabel("Extracted data will be saved to /extractedData/")
+    save_data_text_label.setVisible(False)  # Hide initially
+    layout.addWidget(save_data_text_label)
+
+    # Connect the save_plot_checkbox to show/hide the "hey" text
+    save_plot_checkbox.toggled.connect(lambda checked: save_plot_text_label.setVisible(checked))
+    save_data_checkbox.toggled.connect(lambda checked: save_data_text_label.setVisible(checked))
+
     # Add the second horizontal line separator
     line2 = QFrame()
     line2.setFrameShape(QFrame.HLine)
