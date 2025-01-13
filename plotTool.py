@@ -92,14 +92,11 @@ def extract_data(files, fig_type):
         times, variable_data = times[:min_length], variable_data[:min_length]
 
         # # Apply shifts and scaling to each variable if needed
-        #shift_value=0
-        #scale_value=1       
-        #for i, var in enumerate(variable_data):
-    #         if i == 0 or i == 2:  //select plot(s) to apply shift and scale
-    #             var = var / scale_value  # Apply scale        
-    #         if i == 0 or i == 2: 
-    #             var = var + shift_value  # Apply shift             
-    #         variable_data[i] = var
+        for i, var in enumerate(variable_data):
+            #if i == 0 or i == 2:
+                var = var / scale_value  # Apply scale        
+                var = var + shift_value  # Apply shift             
+                variable_data[i] = var
 
         parsed_data.append((times, variable_data))
     
@@ -209,6 +206,8 @@ def interactive_plot_type_selection_QT():
     save_data = False
     x_min = None
     x_max = None
+    scale_value = None
+    shift_value = None
     file_data = []
     axis_title = None
     axis_dim = None
@@ -216,18 +215,21 @@ def interactive_plot_type_selection_QT():
     usecols = None
 
     def update_values():
-        nonlocal plot_type, save_plot, save_data, x_min, x_max, axis_title, axis_dim, skip_row, usecols
+        nonlocal plot_type, save_plot, save_data, x_min, x_max, scale_value, shift_value, axis_title, axis_dim, skip_row, usecols
         # Update the current values from the UI elements
+        axis_title = axis_title_input.text() if axis_title_input.text() else None
+        axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
         save_plot = save_plot_checkbox.isChecked()
         save_data = save_data_checkbox.isChecked()
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
-        axis_title = axis_title_input.text() if axis_title_input.text() else None
-        axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
+        scale_value = float(scale_input.text()) if scale_input.text() else None
+        shift_value = float(shift_input.text()) if shift_input.text() else None
         
-        #fig_name, dim = select_fig(plot_type)
         axis_title_input.setText("Amp.")
         axis_dim_input.setText("-")
+        scale_input.setText("1")
+        shift_input.setText("0")
 
         # Capture axis name and axis_dim if "function_object Bottom" is selected
         if plot_type == 'function_object':  # Assuming this is the name of the plot type
@@ -373,6 +375,30 @@ def interactive_plot_type_selection_QT():
     line3.setFrameShadow(QFrame.Sunken)
     layout.addWidget(line3)
 
+    # Add input fields for "x min" and "x max" in the same row
+    s_layout = QHBoxLayout()
+    scale_label = QLabel("Scale:")
+    scale_input = QLineEdit()
+    shift_label = QLabel("Shift:")
+    shift_input = QLineEdit()
+
+    # Add spacing between the labels and inputs
+    s_layout.addWidget(scale_label)
+    s_layout.addWidget(scale_input)
+    s_layout.addStretch()  # Add a spacer
+    s_layout.addWidget(shift_label)
+    s_layout.addWidget(shift_input)
+
+    # Align elements in the row
+    s_layout.setAlignment(Qt.AlignLeft)
+    layout.addLayout(s_layout)
+
+    # Add the forth horizontal line separator
+    line3 = QFrame()
+    line3.setFrameShape(QFrame.HLine)
+    line3.setFrameShadow(QFrame.Sunken)
+    layout.addWidget(line3)
+    
     # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
     file_selector.files_data_updated.connect(update_file_paths)
@@ -397,7 +423,7 @@ def interactive_plot_type_selection_QT():
     # Execute the application
     app.exec_()
 
-    return plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, file_data
+    return plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data
 
 class FileSelectorApp(QWidget):
     files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
@@ -498,7 +524,9 @@ def parse_arguments():
     parser.add_argument('-save_data', '-sd', action='store_true', help="Disable saving the data (default: False)")
     parser.add_argument('-x_min', type=float, help="Minimum x-axis value")
     parser.add_argument('-x_max', type=float, help="Maximum x-axis value")
-    
+    parser.add_argument('-scale', '-sc', default=1, type=float, help="Scale value")
+    parser.add_argument('-shift', '-sh', default=0, type=float, help="Shift value")  
+
     args = parser.parse_args()
 
     if args.cols:
@@ -521,16 +549,16 @@ def parse_arguments():
 
         file_data.append((file_path, label))
 
-    return args.plot_type,args.axis_title,args.axis_dim, args.skip_row, usecols, args.save_plot, args.save_data, args.x_min, args.x_max, file_data
+    return args.plot_type,args.axis_title,args.axis_dim, args.skip_row, usecols, args.save_plot, args.save_data, args.x_min, args.x_max, args.scale, args.shift, file_data
 
 
 if __name__ == "__main__":
 
-    plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, file_data = parse_arguments()
+    plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data = parse_arguments()
 
     if not plot_type or not file_data:
         if pyqt_available:
-            plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, file_data = interactive_plot_type_selection_QT()
+            plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data = interactive_plot_type_selection_QT()
         else: 
             plot_type = interactive_plot_type_selection_TK()
             
@@ -547,6 +575,8 @@ if __name__ == "__main__":
         print(f"Used columns: {usecols}")
     print(f"Save Plot: {save_plot}")
     print(f"Save Data: {save_data}")
+    print(f"Scale Value: {scale_value}")
+    print(f"Shift Value: {shift_value}")
     if x_min or x_max:
         print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
     print()
