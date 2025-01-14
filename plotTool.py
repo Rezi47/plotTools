@@ -12,8 +12,9 @@ try:
     from PyQt5.QtWidgets import (
     QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, 
     QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, 
-    QFrame, QTextEdit
+    QFrame, QTextEdit, QMainWindow
     )
+    from PyQt5.QtGui import QGuiApplication, QDoubleValidator
     import sys
     import os
     pyqt_available = True
@@ -201,13 +202,14 @@ def interactive_plot_type_selection_QT():
     save_data = False
     x_min = None
     x_max = None
-    scale_value = None
-    shift_value = None
+    scale_value = 1
+    shift_value = 0
     file_data = []
     axis_title = None
     axis_dim = None
     skip_row = None
     usecols = None
+    plotflag = False
 
     def update_values():
         nonlocal plot_type, save_plot, save_data, x_min, x_max, scale_value, shift_value, axis_title, axis_dim, skip_row, usecols
@@ -218,8 +220,8 @@ def interactive_plot_type_selection_QT():
         save_data = save_data_checkbox.isChecked()
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
-        scale_value = float(scale_input.text()) if scale_input.text() else None
-        shift_value = float(shift_input.text()) if shift_input.text() else None
+        scale_value = float(scale_input.text()) if scale_input.text() else 1
+        shift_value = float(shift_input.text()) if shift_input.text() else 0
         
         axis_title_input.setText("Amp.")
         axis_dim_input.setText("-")
@@ -257,8 +259,10 @@ def interactive_plot_type_selection_QT():
         window.adjustSize()
 
     def plot_button_clicked():
+        nonlocal plotflag
         # Update values before closing the window
         update_values()
+        plotflag = True
         window.close()
 
     def update_file_paths(file_paths):
@@ -275,7 +279,6 @@ def interactive_plot_type_selection_QT():
     window.setWindowTitle("Plot Setting")
     layout = QVBoxLayout()
 
-    # Add a title before the buttons
     title_label = QLabel("Select the Plot Type")
     title_label.setAlignment(Qt.AlignCenter)
     title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
@@ -377,7 +380,7 @@ def interactive_plot_type_selection_QT():
     # Add checkboxes for "Save Plot" and "Save Data" in separate rows
     save_plot_layout = QHBoxLayout()
     save_plot_checkbox = QCheckBox("Save Plot")
-    save_plot_text_label = QLabel(" Figure will be saved in ./function_object_comparison.png")
+    save_plot_text_label = QLabel(" Figure will be saved in: ./*_comparison.png")
     save_plot_text_label.setStyleSheet("color: gray;")  # Make text gray
     save_plot_text_label.setVisible(False)  # Hide initially
     save_plot_layout.addWidget(save_plot_checkbox)
@@ -387,7 +390,7 @@ def interactive_plot_type_selection_QT():
 
     save_data_layout = QHBoxLayout()
     save_data_checkbox = QCheckBox("Save Data")
-    save_data_text_label = QLabel(" Extracted data will be saved in /extractedData/")
+    save_data_text_label = QLabel(" Extracted data will be saved in: /extractedData/*.csv")
     save_data_text_label.setStyleSheet("color: gray;")  # Make text gray
     save_data_text_label.setVisible(False)  # Hide initially
     save_data_layout.addWidget(save_data_checkbox)
@@ -426,16 +429,22 @@ def interactive_plot_type_selection_QT():
     window.resize(400, 300)
     window.show()
 
+    skip_row_input.setValidator(QDoubleValidator())
+    x_min_input.setValidator(QDoubleValidator())
+    x_min_input.setValidator(QDoubleValidator())
+    x_max_input.setValidator(QDoubleValidator())
+    scale_input.setValidator(QDoubleValidator())
+    shift_input.setValidator(QDoubleValidator())
+
     # Center the window on the screen
-    screen_center = QDesktopWidget().availableGeometry().center()
-    window_rect = window.frameGeometry()
-    window_rect.moveCenter(screen_center)
-    window.move(window_rect.center())
+    screen = QGuiApplication.primaryScreen()
+    screen_geometry = screen.availableGeometry()
+    window.move(screen_geometry.center() - window.rect().center())
 
     # Execute the application
     app.exec_()
 
-    return plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data
+    return plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag
 
 class FileSelectorApp(QWidget):
     files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
@@ -526,7 +535,7 @@ def parse_arguments():
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
-    parser.add_argument('-plot_type',   '-pt',                              help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
+    parser.add_argument('-plot_type',   '-pt',  default="function_object",  help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
     parser.add_argument('-axis_title',  '-at',                              help="Specify a Title for y Axis")
     parser.add_argument('-axis_dim',    '-ad',                              help="Specify a Dimension for y Axis")
     parser.add_argument('-skip_row',    '-sr',  default=0,      type=int,   help="Specify a Number to skip rows of files")
@@ -566,21 +575,25 @@ if __name__ == "__main__":
 
     if not plot_type or not file_data:
         if pyqt_available:
-            plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data = interactive_plot_type_selection_QT()
+            plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag = interactive_plot_type_selection_QT()
         else: 
             plot_type = interactive_plot_type_selection_TK()
-            
+    
+    if not plotflag:
+        print("Error: Missing required arguments for plotting. Exiting.")
+        sys.exit(1)
+
     for file_info in file_data:
         print("File:", os.path.relpath(file_info[0]))
         print("Label:", file_info[1])
         print()
     
     print(f"Plot type: {plot_type}")
+    print(f"Axis title: {axis_title}")
+    print(f"Axis Dimension: {axis_dim}")
     if plot_type == "function_object":
-        print(f"Axis title: {axis_title}")
-        print(f"Axis Dimension: {axis_dim}")
         print(f"Skiped rows: {skip_row}")
-        print(f"Used columns: {usecols}")
+        print(f"Used columns: {usecols}") if usecols else None
     print(f"Save Plot: {save_plot}")
     print(f"Save Data: {save_data}")
     print(f"Scale Value: {scale_value}")
