@@ -308,7 +308,7 @@ def interactive_plot_type_selection_QT():
 
     # Add "Skip Row" and "Usecols" fields in the same row
     data_layout = QHBoxLayout()
-    skip_row_label = QLabel("Skip rows:")
+    skip_row_label = QLabel("Skiped rows:")
     skip_row_input = QLineEdit()
     usecols_label = QLabel("Used columns:")
     usecols_input = QLineEdit()
@@ -576,12 +576,10 @@ if __name__ == "__main__":
     if not plot_type or not file_data:
         if pyqt_available:
             plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag = interactive_plot_type_selection_QT()
+            if not plotflag:
+                sys.exit(1)
         else: 
-            plot_type = interactive_plot_type_selection_TK()
-    
-    if not plotflag:
-        print("Error: Missing required arguments for plotting. Exiting.")
-        sys.exit(1)
+            plot_type = interactive_plot_type_selection_TK()   
 
     for file_info in file_data:
         print("File:", os.path.relpath(file_info[0]))
