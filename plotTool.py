@@ -12,7 +12,7 @@ try:
     from PyQt5.QtWidgets import (
     QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, 
     QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, 
-    QFrame, QTextEdit, QMainWindow
+    QFrame, QTextEdit, QMainWindow, QMessageBox
     )
     from PyQt5.QtGui import QGuiApplication, QDoubleValidator
     import sys
@@ -269,6 +269,11 @@ def interactive_plot_type_selection_QT():
 
     def plot_button_clicked():
         nonlocal plotflag
+
+        if not file_data:
+            QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
+            return
+        
         # Update values before closing the window
         update_values()
         plotflag = True
@@ -327,7 +332,7 @@ def interactive_plot_type_selection_QT():
     skip_row_input = QLineEdit()
     usecols_label = QLabel("Used columns:")
     usecols_input = QLineEdit()
-    usecols_input.setPlaceholderText("0,1,2,4")
+    usecols_input.setPlaceholderText("Example: 0,1,2,4")
 
     # Set fixed width for skip_row_input to allow 3-digit numbers
     skip_row_input.setFixedWidth(50)
@@ -607,13 +612,10 @@ if __name__ == "__main__":
     print(f"Plot type: {plot_type}")
     print(f"Axis title: {axis_title}")
     print(f"Axis Dimension: {axis_dim}")
-    if not plot_type == "motion":
-        print(f"Skiped rows: {skip_row}")
-        print(f"Used columns: {usecols}") if usecols else None
-    print(f"Save Plot: {save_plot}")
-    print(f"Save Data: {save_data}")
-    print(f"Scale Value: {scale_value}")
-    print(f"Shift Value: {shift_value}")
+    print(f"Skiped rows: {skip_row}") if skip_row else None
+    print(f"Used columns: {usecols}") if usecols else None
+    print(f"Scale Value: {scale_value}") if scale_value != 1 else None
+    print(f"Shift Value: {shift_value}") if shift_value != 0 else None
     if x_min or x_max:
         print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
     print()
