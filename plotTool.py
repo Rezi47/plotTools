@@ -71,15 +71,16 @@ def extract_motion_values(file_path):
 fig_config = {
     'general': {
         'label': 'General',
+        'axisTitle': 'Amplitude',
         'dimension': '-',
         'function': extract_general_values
     },
     'motion': {
         'label': 'Motion',
+        'axisTitle': 'Amplitude',
         'dimension': 'm',
         'function': extract_motion_values
     },
-
 }
 
 def extract_data(files, fig_type):
@@ -232,16 +233,15 @@ def interactive_plot_type_selection_QT():
         scale_value = float(scale_input.text()) if scale_input.text() else 1
         shift_value = float(shift_input.text()) if shift_input.text() else 0
         
-        axis_title_input.setText("Amp.")
+        axis_title_input.setText(fig_config[plot_type]['axisTitle'])
         axis_dim_input.setText(fig_config[plot_type]['dimension'])
         scale_input.setText("1")
         shift_input.setText("0")
 
-        # Capture if "general" is selected
-        if plot_type == 'general':
-            skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
-            usecols_text = usecols_input.text()           
-            usecols = [int(col) for col in usecols_text.split(",") if col.strip().isdigit()] if usecols_text else None
+        # If they are valid integer, use it; otherwise default to 0.
+        skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
+        usecols_text = usecols_input.text()
+        usecols = [int(col) for col in usecols_text.split(",") if col.strip().isdigit()] if usecols_text else None
 
     def set_plot_type(plot_value):
         nonlocal plot_type
@@ -253,13 +253,13 @@ def interactive_plot_type_selection_QT():
             button.setStyleSheet('background-color: none')  # Reset all buttons
         plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
 
-        # Dynamically add fields for "Axis Title" and "Dimension" if "general" is selected
-        if plot_value == 'general':
-            skip_row_label.setEnabled(True)
-            skip_row_input.setEnabled(True)
-            usecols_label.setEnabled(True)
-            usecols_input.setEnabled(True)
-        else:
+        skip_row_label.setEnabled(True)
+        skip_row_input.setEnabled(True)
+        usecols_label.setEnabled(True)
+        usecols_input.setEnabled(True)
+        
+        # Dynamically gray out fields for "Axis Title" and "Dimension" if "motion" is selected
+        if plot_value == 'motion':
             skip_row_label.setEnabled(False)
             skip_row_input.setEnabled(False)
             usecols_label.setEnabled(False)
@@ -309,12 +309,15 @@ def interactive_plot_type_selection_QT():
     axis_dim_label = QLabel("Dimension:")
     axis_dim_input = QLineEdit()
 
+    axis_dim_input.setFixedWidth(70)
+
     # Add widgets to the horizontal layout
     axis_layout.addWidget(axis_title_label)
     axis_layout.addWidget(axis_title_input)
-    axis_layout.addSpacing(20)  # Add some space between inputs for better visual separation
+    axis_layout.addSpacing(10)  # Add some space between inputs for better visual separation
     axis_layout.addWidget(axis_dim_label)
     axis_layout.addWidget(axis_dim_input)
+    axis_layout.addStretch()
 
     layout.addLayout(axis_layout)
 
@@ -332,9 +335,10 @@ def interactive_plot_type_selection_QT():
     # Add widgets to the horizontal layout
     data_layout.addWidget(skip_row_label)
     data_layout.addWidget(skip_row_input)
-    data_layout.addSpacing(70)  # Add space to align usecols label with the Dimension label
+    data_layout.addSpacing(10)  # Add space to align usecols label with the Dimension label
     data_layout.addWidget(usecols_label)
     data_layout.addWidget(usecols_input)
+    data_layout.addStretch()
 
     layout.addLayout(data_layout)
 
@@ -347,12 +351,16 @@ def interactive_plot_type_selection_QT():
     shift_label = QLabel("Shift:")
     shift_input = QLineEdit()
 
+    scale_input.setFixedWidth(60)
+    shift_input.setFixedWidth(60)
+
     # Add spacing between the labels and inputs
     s_layout.addWidget(scale_label)
     s_layout.addWidget(scale_input)
-    s_layout.addStretch()  # Add a spacer
+    s_layout.addSpacing(10) # Reduced spacing between scale and shift
     s_layout.addWidget(shift_label)
     s_layout.addWidget(shift_input)
+    s_layout.addStretch()
 
     # Align elements in the row
     s_layout.setAlignment(Qt.AlignLeft)
@@ -368,12 +376,16 @@ def interactive_plot_type_selection_QT():
     x_max_label = QLabel("x max:")
     x_max_input = QLineEdit()
 
+    x_min_input.setFixedWidth(60)
+    x_max_input.setFixedWidth(60)
+
     # Add spacing between the labels and inputs
     x_layout.addWidget(x_min_label)
     x_layout.addWidget(x_min_input)
-    x_layout.addStretch()  # Add a spacer
+    x_layout.addSpacing(10) # Reduced spacing between scale and shift
     x_layout.addWidget(x_max_label)
     x_layout.addWidget(x_max_input)
+    x_layout.addStretch()  # Push everything to the left
 
     # Align elements in the row
     x_layout.setAlignment(Qt.AlignLeft)
@@ -595,7 +607,7 @@ if __name__ == "__main__":
     print(f"Plot type: {plot_type}")
     print(f"Axis title: {axis_title}")
     print(f"Axis Dimension: {axis_dim}")
-    if plot_type == "general":
+    if not plot_type == "motion":
         print(f"Skiped rows: {skip_row}")
         print(f"Used columns: {usecols}") if usecols else None
     print(f"Save Plot: {save_plot}")
