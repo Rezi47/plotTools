@@ -26,9 +26,9 @@ except ImportError:
 
 app = QApplication(sys.argv)
           
-def extract_function_object_values(file_path):
+def extract_general_values(file_path):
     """
-    Reads data from the given file and function_object values.
+    Reads data from the given file and general values.
     """
     with open(file_path, "r") as infile:
         cleaned_data = "".join(line.replace("(", "").replace(")", "") for line in infile)
@@ -68,20 +68,27 @@ def extract_motion_values(file_path):
     variable_data = list(map(list, zip(*variable_data))) if variable_data else []
     return np.array(times), [np.array(var) for var in variable_data]
 
-fig_type_mapping = {
-        'motion': extract_motion_values,
-        'function_object': extract_function_object_values,
-    }
+fig_config = {
+    'general': {
+        'label': 'General',
+        'function': extract_general_values
+    },
+    'motion': {
+        'label': 'Motion',
+        'function': extract_motion_values
+    },
+
+}
 
 def extract_data(files, fig_type):
     parsed_data = []
 
     # for file in files:
     for i, file in enumerate(files):
-        if fig_type in fig_type_mapping:
-            times, variable_data = fig_type_mapping[fig_type](file)
+        if fig_type in fig_config:
+            times, variable_data = fig_config[fig_type]['function'](file)
         else:
-            raise ValueError(f"Unknown fig_type: {fig_type}. Available fig_types: {', '.join(fig_type_mapping.keys())}")
+            sys.exit(f"Unknown fig_type: {fig_type}. Available fig_types: {', '.join(fig_config.keys())}")
             
         # Ensure arrays have the same length
         min_length = min(len(times), len(variable_data[0]))
@@ -228,8 +235,8 @@ def interactive_plot_type_selection_QT():
         scale_input.setText("1")
         shift_input.setText("0")
 
-        # Capture axis name and axis_dim if "function_object Bottom" is selected
-        if plot_type == 'function_object':  # Assuming this is the name of the plot type
+        # Capture axis name and axis_dim if "general" is selected
+        if plot_type == 'general':  # Assuming this is the name of the plot type
             skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
             usecols_text = usecols_input.text()           
             usecols = [int(col) for col in usecols_text.split(",") if col.strip().isdigit()] if usecols_text else None
@@ -244,8 +251,8 @@ def interactive_plot_type_selection_QT():
             button.setStyleSheet('background-color: none')  # Reset all buttons
         plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
 
-        # Dynamically add fields for "Axis Title" and "Dimension" if "function_object" is selected
-        if plot_value == 'function_object':
+        # Dynamically add fields for "Axis Title" and "Dimension" if "general" is selected
+        if plot_value == 'general':
             skip_row_label.setVisible(True)
             skip_row_input.setVisible(True)
             usecols_label.setVisible(True)
@@ -284,7 +291,7 @@ def interactive_plot_type_selection_QT():
     title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
     layout.addWidget(title_label)
 
-    plot_buttons = {key: QPushButton(key) for key in fig_type_mapping.keys()}
+    plot_buttons = {key: QPushButton(config['label']) for key, config in fig_config.items()}
 
     for plot_value, button in plot_buttons.items():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
@@ -535,7 +542,7 @@ def parse_arguments():
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
-    parser.add_argument('-plot_type',   '-pt',  default="function_object",  help=f"Specify the Type of plot: {', '.join(fig_type_mapping.keys())}")
+    parser.add_argument('-plot_type',   '-pt',  default="general",  help=f"Specify the Type of plot: {', '.join(fig_config.keys())}")
     parser.add_argument('-axis_title',  '-at',                              help="Specify a Title for y Axis")
     parser.add_argument('-axis_dim',    '-ad',                              help="Specify a Dimension for y Axis")
     parser.add_argument('-skip_row',    '-sr',  default=0,      type=int,   help="Specify a Number to skip rows of files")
@@ -589,7 +596,7 @@ if __name__ == "__main__":
     print(f"Plot type: {plot_type}")
     print(f"Axis title: {axis_title}")
     print(f"Axis Dimension: {axis_dim}")
-    if plot_type == "function_object":
+    if plot_type == "general":
         print(f"Skiped rows: {skip_row}")
         print(f"Used columns: {usecols}") if usecols else None
     print(f"Save Plot: {save_plot}")
