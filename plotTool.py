@@ -71,10 +71,12 @@ def extract_motion_values(file_path):
 fig_config = {
     'general': {
         'label': 'General',
+        'dimension': '-',
         'function': extract_general_values
     },
     'motion': {
         'label': 'Motion',
+        'dimension': 'm',
         'function': extract_motion_values
     },
 
@@ -231,11 +233,11 @@ def interactive_plot_type_selection_QT():
         shift_value = float(shift_input.text()) if shift_input.text() else 0
         
         axis_title_input.setText("Amp.")
-        axis_dim_input.setText("-")
+        axis_dim_input.setText(fig_config[plot_type]['dimension'])
         scale_input.setText("1")
         shift_input.setText("0")
 
-        # Capture axis name and axis_dim if "general" is selected
+        # Capture if "general" is selected
         if plot_type == 'general':
             skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
             usecols_text = usecols_input.text()           
