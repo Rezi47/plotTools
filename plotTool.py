@@ -609,7 +609,7 @@ if __name__ == "__main__":
         print("Label:", file_info[1])
         print()
     
-    print(f"Plot type: {plot_type}")
+    print(f"Plot type: {fig_config[plot_type]['label']}")
     print(f"Axis title: {axis_title}")
     print(f"Axis Dimension: {axis_dim}")
     print(f"Skiped rows: {skip_row}") if skip_row else None
