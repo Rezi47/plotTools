@@ -8,7 +8,7 @@ import itertools
 from io import StringIO
 import tkinter as tk
 try:
-    from PyQt5.QtCore import Qt, pyqtSignal
+    from PyQt5.QtCore import Qt, pyqtSignal, QTimer
     from PyQt5.QtWidgets import (
     QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, 
     QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, 
@@ -236,7 +236,7 @@ def interactive_plot_type_selection_QT():
         shift_input.setText("0")
 
         # Capture axis name and axis_dim if "general" is selected
-        if plot_type == 'general':  # Assuming this is the name of the plot type
+        if plot_type == 'general':
             skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
             usecols_text = usecols_input.text()           
             usecols = [int(col) for col in usecols_text.split(",") if col.strip().isdigit()] if usecols_text else None
@@ -253,15 +253,15 @@ def interactive_plot_type_selection_QT():
 
         # Dynamically add fields for "Axis Title" and "Dimension" if "general" is selected
         if plot_value == 'general':
-            skip_row_label.setVisible(True)
-            skip_row_input.setVisible(True)
-            usecols_label.setVisible(True)
-            usecols_input.setVisible(True)
+            skip_row_label.setEnabled(True)
+            skip_row_input.setEnabled(True)
+            usecols_label.setEnabled(True)
+            usecols_input.setEnabled(True)
         else:
-            skip_row_label.setVisible(False)
-            skip_row_input.setVisible(False)
-            usecols_label.setVisible(False)
-            usecols_input.setVisible(False)
+            skip_row_label.setEnabled(False)
+            skip_row_input.setEnabled(False)
+            usecols_label.setEnabled(False)
+            usecols_input.setEnabled(False)
         
         window.adjustSize()
 
@@ -297,6 +297,9 @@ def interactive_plot_type_selection_QT():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
         layout.addWidget(button)
 
+    # Auto-click the "general" button
+    QTimer.singleShot(100, plot_buttons["general"].click)
+
     # Add some fields right after the plot type buttons
     axis_layout = QHBoxLayout()
     axis_title_label = QLabel("Axis title:")
@@ -330,12 +333,6 @@ def interactive_plot_type_selection_QT():
     data_layout.addSpacing(70)  # Add space to align usecols label with the Dimension label
     data_layout.addWidget(usecols_label)
     data_layout.addWidget(usecols_input)
-
-    # Initially hide these inputs
-    skip_row_label.setVisible(False)
-    skip_row_input.setVisible(False)
-    usecols_label.setVisible(False)
-    usecols_input.setVisible(False)
 
     layout.addLayout(data_layout)
 
