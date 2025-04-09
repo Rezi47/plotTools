@@ -558,9 +558,9 @@ def parse_arguments():
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
-    parser.add_argument('-plot_type',   '-pt',  default="general",  help=f"Specify the Type of plot: {', '.join(fig_config.keys())}")
-    parser.add_argument('-axis_title',  '-at',                              help="Specify a Title for y Axis")
-    parser.add_argument('-axis_dim',    '-ad',                              help="Specify a Dimension for y Axis")
+    parser.add_argument('-plot_type',   '-pt',  default="general",          help=f"Specify the Type of plot: {', '.join(fig_config.keys())}")
+    parser.add_argument('-axis_title',  '-at',  default="Amplitude",        help="Specify a Title for y Axis")
+    parser.add_argument('-axis_dim',    '-ad',  default="-",                help="Specify a Dimension for y Axis")
     parser.add_argument('-skip_row',    '-sr',  default=0,      type=int,   help="Specify a Number to skip rows of files")
     parser.add_argument('-cols',        '-co',  default=None,               help="Specify columns numbers")
     parser.add_argument('-save_plot',   '-sp',  action='store_true',        help="Disable saving the plot (default: False)")
