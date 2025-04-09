@@ -83,15 +83,15 @@ fig_config = {
     },
 }
 
-def extract_data(files, fig_type):
+def extract_data():
     parsed_data = []
 
     # for file in files:
     for i, file in enumerate(files):
-        if fig_type in fig_config:
-            times, variable_data = fig_config[fig_type]['function'](file)
+        if plot_type in fig_config:
+            times, variable_data = fig_config[plot_type]['function'](file)
         else:
-            sys.exit(f"Unknown fig_type: {fig_type}. Available fig_types: {', '.join(fig_config.keys())}")
+            sys.exit(f"Unknown plot_type: {plot_type}. Available plot_type: {', '.join(fig_config.keys())}")
             
         # Ensure arrays have the same length
         min_length = min(len(times), len(variable_data[0]))
@@ -108,7 +108,7 @@ def extract_data(files, fig_type):
     
     return parsed_data
 
-def plot(parsed_data, labels, x_min, x_max):
+def plot():
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
@@ -124,6 +124,10 @@ def plot(parsed_data, labels, x_min, x_max):
 
     # Create subplots dynamically
     fig, axs = plt.subplots(1, max_num_variables, figsize=(5 * max_num_variables, 5))
+
+    if fig_title:
+        fig.suptitle(fig_title, fontsize=14) 
+    
     if max_num_variables == 1:  # Single subplot case
         axs = [axs]        
     # Plot data for each variable
@@ -152,7 +156,7 @@ def plot(parsed_data, labels, x_min, x_max):
 
     return fig
 
-def save_func(fig, files, parsed_data, labels, fig_type, save_plot=False, save_data=False):
+def save_func():
     """
     Saves plots and extracted data for a given fig_type.
     """
@@ -161,8 +165,8 @@ def save_func(fig, files, parsed_data, labels, fig_type, save_plot=False, save_d
         output_dir = "."
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        fig.savefig(os.path.join(output_dir, f"{fig_type}_comparison.png"))
-        print(f"Figure saved to {output_dir}/{fig_type}_comparison.png")
+        fig.savefig(os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}{axis_title}.png"))
+        print(f"Figure saved to {output_dir}/{fig_title + '_' if fig_title else ''}{axis_title}.png")
 
     # Save extracted data if enabled
     if save_data:
@@ -173,7 +177,7 @@ def save_func(fig, files, parsed_data, labels, fig_type, save_plot=False, save_d
                 os.makedirs(output_dir)
 
             for i, var in enumerate(variables):
-                file_path = os.path.join(output_dir, f"{label}_{axis_title}_{i}.csv")
+                file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}{label}_{axis_title}_{i+1}.csv")
                 with open(file_path, 'w') as f:
                     f.write(f"Time, {axis_title}\n")
                     for t, d in zip(times, var):
@@ -568,7 +572,8 @@ def parse_arguments():
     parser.add_argument('-x_min',       '-xmi',                 type=float, help="Minimum x-axis value")
     parser.add_argument('-x_max',       '-xma',                 type=float, help="Maximum x-axis value")
     parser.add_argument('-scale',       '-sc',  default=1,      type=float, help="Scale value")
-    parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")  
+    parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")
+    parser.add_argument('-fig_title',   '-ft',  default=None,               help="Specify a Title for the figure")
 
     args = parser.parse_args()
 
@@ -589,12 +594,12 @@ def parse_arguments():
 
         file_data.append((file_path, label))
 
-    return args.plot_type,args.axis_title,args.axis_dim, args.skip_row, usecols, args.save_plot, args.save_data, args.x_min, args.x_max, args.scale, args.shift, file_data
+    return args.plot_type,args.axis_title,args.axis_dim, args.skip_row, usecols, args.save_plot, args.save_data, args.x_min, args.x_max, args.scale, args.shift, args.fig_title, file_data
 
 
 if __name__ == "__main__":
 
-    plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data = parse_arguments()
+    plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, fig_title, file_data = parse_arguments()
 
     if not plot_type or not file_data:
         if pyqt_available:
@@ -609,7 +614,7 @@ if __name__ == "__main__":
         print("Label:", file_info[1])
         print()
     
-    print(f"Plot type: {fig_config[plot_type]['label']}")
+    print(f"Plot type: {plot_type}")
     print(f"Axis title: {axis_title}")
     print(f"Axis Dimension: {axis_dim}")
     print(f"Skiped rows: {skip_row}") if skip_row else None
@@ -624,9 +629,9 @@ if __name__ == "__main__":
     labels = [entry[1] for entry in file_data]
     
     # Parse data from all files
-    parsed_data = extract_data(files, plot_type)
+    parsed_data = extract_data()
 
     # Generate the dynamic plot and get the figure object
-    fig = plot(parsed_data, labels, x_min, x_max)
+    fig = plot()
 
-    save_func(fig, files, parsed_data, labels, plot_type, save_plot, save_data)
+    save_func()
