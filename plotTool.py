@@ -141,7 +141,7 @@ def plot():
             axs[i].plot(times, variables[i], label=label, linestyle=linestyle, linewidth=1, color=color)
         
         # Set subplot titles and labels
-        axs[i].set_title(f"{axis_title} {i+1}")       
+        #axs[i].set_title(f"{axis_title} {i+1}")       
         axs[i].set_xlabel(r"t ($s$)")
         axs[i].set_ylabel(fr"{axis_title} (${axis_dim}$)")
         axs[i].set_xlim(
@@ -219,6 +219,7 @@ def interactive_plot_type_selection_QT():
     scale_value = 1
     shift_value = 0
     file_data = []
+    fig_title = None
     axis_title = None
     axis_dim = None
     skip_row = None
@@ -226,9 +227,10 @@ def interactive_plot_type_selection_QT():
     plotflag = False
 
     def update_values():
-        nonlocal plot_type, save_plot, save_data, x_min, x_max, scale_value, shift_value, axis_title, axis_dim, skip_row, usecols
+        nonlocal plot_type, save_plot, save_data, x_min, x_max, scale_value, shift_value, fig_title, axis_title, axis_dim, skip_row, usecols
         # Update the current values from the UI elements
         axis_title = axis_title_input.text() if axis_title_input.text() else None
+        fig_title = fig_title_input.text() if fig_title_input.text() else None
         axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
         save_plot = save_plot_checkbox.isChecked()
         save_data = save_data_checkbox.isChecked()
@@ -311,6 +313,22 @@ def interactive_plot_type_selection_QT():
     # Auto-click the "general" button
     QTimer.singleShot(100, plot_buttons["general"].click)
 
+    # Add Figure Title
+    fig_title_layout = QHBoxLayout()
+    fig_title_label = QLabel("Figure title:")
+    fig_title_input = QLineEdit()
+
+    fig_title_input.setFixedWidth(140)
+
+    fig_title_layout.addWidget(fig_title_label)
+    fig_title_layout.addWidget(fig_title_input)
+    fig_title_layout.addStretch()
+
+    layout.addLayout(fig_title_layout)
+
+    ########### Add the 1st horizontal line separator ###########
+    layout.addWidget(create_horizontal_line())
+
     # Add some fields right after the plot type buttons
     axis_layout = QHBoxLayout()
     axis_title_label = QLabel("Axis title:")
@@ -351,7 +369,7 @@ def interactive_plot_type_selection_QT():
 
     layout.addLayout(data_layout)
 
-    ########### Add the 1st horizontal line separator ###########
+    ########### Add the 2st horizontal line separator ###########
     layout.addWidget(create_horizontal_line())
 
     s_layout = QHBoxLayout()
@@ -375,7 +393,7 @@ def interactive_plot_type_selection_QT():
     s_layout.setAlignment(Qt.AlignLeft)
     layout.addLayout(s_layout)
 
-    ########### Add the 2nd horizontal line separator ###########
+    ########### Add the 3nd horizontal line separator ###########
     layout.addWidget(create_horizontal_line())
 
     # Add input fields for "x min" and "x max" in the same row
@@ -400,7 +418,7 @@ def interactive_plot_type_selection_QT():
     x_layout.setAlignment(Qt.AlignLeft)
     layout.addLayout(x_layout)
 
-    ########### Add the 3rd horizontal line separator ###########
+    ########### Add the 4rd horizontal line separator ###########
     layout.addWidget(create_horizontal_line())
 
     # Add input fields for "x min" and "x max" in the same row
@@ -429,7 +447,7 @@ def interactive_plot_type_selection_QT():
     save_plot_checkbox.toggled.connect(lambda checked: save_plot_text_label.setVisible(checked))
     save_data_checkbox.toggled.connect(lambda checked: save_data_text_label.setVisible(checked))
 
-    ########### Add the 4th horizontal line separator ###########
+    ########### Add the 5th horizontal line separator ###########
     layout.addWidget(create_horizontal_line())
   
     # Integrate FileSelectorApp (Browse button functionality)
@@ -471,7 +489,7 @@ def interactive_plot_type_selection_QT():
     # Execute the application
     app.exec_()
 
-    return plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag
+    return plot_type, fig_title, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag
 
 class FileSelectorApp(QWidget):
     files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
@@ -563,6 +581,7 @@ def parse_arguments():
                        help="List of input files followed by their options: -label (add a label, default: dir_name)"
                        )
     parser.add_argument('-plot_type',   '-pt',  default="general",          help=f"Specify the Type of plot: {', '.join(fig_config.keys())}")
+    parser.add_argument('-fig_title',   '-ft',  default=None,               help="Specify a Title for the figure")
     parser.add_argument('-axis_title',  '-at',  default="Amplitude",        help="Specify a Title for y Axis")
     parser.add_argument('-axis_dim',    '-ad',  default="-",                help="Specify a Dimension for y Axis")
     parser.add_argument('-skip_row',    '-sr',  default=0,      type=int,   help="Specify a Number to skip rows of files")
@@ -573,7 +592,6 @@ def parse_arguments():
     parser.add_argument('-x_max',       '-xma',                 type=float, help="Maximum x-axis value")
     parser.add_argument('-scale',       '-sc',  default=1,      type=float, help="Scale value")
     parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")
-    parser.add_argument('-fig_title',   '-ft',  default=None,               help="Specify a Title for the figure")
 
     args = parser.parse_args()
 
@@ -603,7 +621,7 @@ if __name__ == "__main__":
 
     if not plot_type or not file_data:
         if pyqt_available:
-            plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag = interactive_plot_type_selection_QT()
+            plot_type, fig_title, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag = interactive_plot_type_selection_QT()
             if not plotflag:
                 sys.exit(1)
         else: 
@@ -615,12 +633,13 @@ if __name__ == "__main__":
         print()
     
     print(f"Plot type: {plot_type}")
+    print(f"Figure title: {fig_title}") if fig_title else None
     print(f"Axis title: {axis_title}")
-    print(f"Axis Dimension: {axis_dim}")
+    print(f"Axis dimension: {axis_dim}")
     print(f"Skiped rows: {skip_row}") if skip_row else None
     print(f"Used columns: {usecols}") if usecols else None
-    print(f"Scale Value: {scale_value}") if scale_value != 1 else None
-    print(f"Shift Value: {shift_value}") if shift_value != 0 else None
+    print(f"Scale value: {scale_value}") if scale_value != 1 else None
+    print(f"Shift value: {shift_value}") if shift_value != 0 else None
     if x_min or x_max:
         print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
     print()
