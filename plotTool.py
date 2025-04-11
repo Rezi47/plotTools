@@ -170,19 +170,47 @@ def save_func():
 
     # Save extracted data if enabled
     if save_data:
-        for file, (times, variables), label in zip(files, parsed_data, labels):
-            base_dir = os.path.dirname(file)
-            output_dir = os.path.join(base_dir, "extractedData")
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
+        base_dir = os.path.dirname(files[0]) if files else ""
+        output_dir = os.path.join(base_dir, "extractedData")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
 
-            for i, var in enumerate(variables):
-                file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}{label}_{axis_title}_{i+1}.csv")
-                with open(file_path, 'w') as f:
-                    f.write(f"Time, {axis_title}\n")
-                    for t, d in zip(times, var):
-                        f.write(f"{t}, {d}\n")
-                print(f"Data saved for {label}: {file_path}")
+        # First determine the maximum number of variables across all datasets
+        max_vars = max(len(variables) for _, variables in parsed_data)
+
+        # Create one file per variable index
+        for var_idx in range(max_vars):
+            # Create filename for this variable index
+            file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}Variable_{var_idx+1}.csv")
+            
+            with open(file_path, 'w') as f:
+                # Write header - Time columns for each dataset that has this variable
+                headers = []
+                for label, (times, variables) in zip(labels, parsed_data):
+                    if var_idx < len(variables):
+                        headers.append(f"Time_{label}")
+                        headers.append(f"Data_{label}")
+                f.write(",".join(headers) + "\n")
+                
+                # Find maximum time length across datasets that have this variable
+                relevant_datasets = [times for times, variables in parsed_data if var_idx < len(variables)]
+                max_length = max(len(times) for times in relevant_datasets) if relevant_datasets else 0
+                
+                # Write data rows
+                for row_idx in range(max_length):
+                    row_data = []
+                    for (times, variables), label in zip(parsed_data, labels):
+                        if var_idx < len(variables):
+                            # Add time value if exists, else empty
+                            time_val = str(times[row_idx]) if row_idx < len(times) else ""
+                            row_data.append(time_val)
+                            # Add variable value if exists, else empty
+                            var_val = str(variables[var_idx][row_idx]) if row_idx < len(variables[var_idx]) else ""
+                            row_data.append(var_val)
+                    
+                    f.write(",".join(row_data) + "\n")
+            
+            print(f"Saved Variable {var_idx+1} data in: {file_path}")
             
 def interactive_plot_type_selection_TK():
     root = tk.Tk()
