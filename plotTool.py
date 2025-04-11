@@ -108,7 +108,7 @@ def extract_data():
     
     return parsed_data
 
-def plot():
+def plot(disable_plot):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
@@ -152,7 +152,7 @@ def plot():
 
     # Adjust layout
     plt.tight_layout()
-    plt.show()
+    if disable_plot: plt.show()
 
     return fig
 
@@ -592,6 +592,7 @@ def parse_arguments():
     parser.add_argument('-x_max',       '-xma',                 type=float, help="Maximum x-axis value")
     parser.add_argument('-scale',       '-sc',  default=1,      type=float, help="Scale value")
     parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")
+    parser.add_argument('-disable_plot','-dp',  action='store_false',        help="Disable Plot")
 
     args = parser.parse_args()
 
@@ -612,12 +613,12 @@ def parse_arguments():
 
         file_data.append((file_path, label))
 
-    return args.plot_type,args.axis_title,args.axis_dim, args.skip_row, usecols, args.save_plot, args.save_data, args.x_min, args.x_max, args.scale, args.shift, args.fig_title, file_data
+    return args.plot_type,args.axis_title,args.axis_dim, args.skip_row, usecols, args.save_plot, args.save_data, args.x_min, args.x_max, args.scale, args.shift, args.fig_title, args.disable_plot, file_data
 
 
 if __name__ == "__main__":
 
-    plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, fig_title, file_data = parse_arguments()
+    plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, fig_title, disable_plot, file_data = parse_arguments()
 
     if not plot_type or not file_data:
         if pyqt_available:
@@ -651,6 +652,6 @@ if __name__ == "__main__":
     parsed_data = extract_data()
 
     # Generate the dynamic plot and get the figure object
-    fig = plot()
+    fig = plot(disable_plot)
 
     save_func()
