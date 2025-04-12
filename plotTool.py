@@ -100,14 +100,25 @@ def extract_data():
         # # Apply shifts and scaling to each variable if needed
         for i, var in enumerate(variable_data):
             #if i == 0 or i == 2:
-                var = var / scale_value  # Apply scale        
-                var = var + shift_value  # Apply shift             
+                var = var / scale  # Apply scale        
+                var = var + shift  # Apply shift             
                 variable_data[i] = var
 
         parsed_data.append((times, variable_data))
     
     return parsed_data
 
+def normalize_to_origin(parsed_data):
+    """
+    Normalizes each variable's data in-place by subtracting its first value,
+    making all variables start at 0 at the beginning of time.
+    Modifies the input data directly instead of returning a new object.
+    """
+    for _, variable_data in parsed_data:  # Loop through each (times, variable_data) pair
+        for var_array in variable_data:   # Loop through each variable array
+            if len(var_array) > 0:
+                first_value = np.mean(var_array)
+                var_array -= first_value  # Subtract first value in-place (modifies original array)
 def plot(disable_plot):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
@@ -244,8 +255,9 @@ def interactive_plot_type_selection_QT():
     save_data = False
     x_min = None
     x_max = None
-    scale_value = 1
-    shift_value = 0
+    scale = 1
+    shift = 0
+    norm_origin = False
     file_data = []
     fig_title = None
     axis_title = None
@@ -255,7 +267,7 @@ def interactive_plot_type_selection_QT():
     plotflag = False
 
     def update_values():
-        nonlocal plot_type, save_plot, save_data, x_min, x_max, scale_value, shift_value, fig_title, axis_title, axis_dim, skip_row, usecols
+        nonlocal plot_type, save_plot, save_data, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
         # Update the current values from the UI elements
         axis_title = axis_title_input.text() if axis_title_input.text() else None
         fig_title = fig_title_input.text() if fig_title_input.text() else None
@@ -264,9 +276,10 @@ def interactive_plot_type_selection_QT():
         save_data = save_data_checkbox.isChecked()
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
-        scale_value = float(scale_input.text()) if scale_input.text() else 1
-        shift_value = float(shift_input.text()) if shift_input.text() else 0
-        
+        scale = float(scale_input.text()) if scale_input.text() else 1
+        shift = float(shift_input.text()) if shift_input.text() else 0
+        norm_origin = norm_origin_checkbox.isChecked()
+
         axis_title_input.setText(fig_config[plot_type]['axisTitle'])
         axis_dim_input.setText(fig_config[plot_type]['dimension'])
         scale_input.setText("1")
@@ -329,7 +342,7 @@ def interactive_plot_type_selection_QT():
 
     title_label = QLabel("Select the Plot Type")
     title_label.setAlignment(Qt.AlignCenter)
-    title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
+    title_label.setStyleSheet("font-size: 13px; font-weight: regular; margin-bottom: 10px;")
     layout.addWidget(title_label)
 
     plot_buttons = {key: QPushButton(config['label']) for key, config in fig_config.items()}
@@ -419,7 +432,14 @@ def interactive_plot_type_selection_QT():
 
     # Align elements in the row
     s_layout.setAlignment(Qt.AlignLeft)
+
+    norm_origin_layout = QHBoxLayout()
+    norm_origin_checkbox = QCheckBox("Normalize to the Origin")
+    norm_origin_layout.addWidget(norm_origin_checkbox)
+    norm_origin_layout.setAlignment(Qt.AlignLeft)  # Align to the left   
+
     layout.addLayout(s_layout)
+    layout.addLayout(norm_origin_layout)
 
     ########### Add the 3nd horizontal line separator ###########
     layout.addWidget(create_horizontal_line())
@@ -517,7 +537,13 @@ def interactive_plot_type_selection_QT():
     # Execute the application
     app.exec_()
 
-    return plot_type, fig_title, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag
+    return (
+        plot_type, fig_title, plotflag,
+        axis_title, axis_dim, x_min, x_max,
+        skip_row, usecols, scale, shift, norm_origin,
+        save_plot, save_data,
+        file_data
+    )
 
 class FileSelectorApp(QWidget):
     files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
@@ -621,6 +647,7 @@ def parse_arguments():
     parser.add_argument('-scale',       '-sc',  default=1,      type=float, help="Scale value")
     parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")
     parser.add_argument('-disable_plot','-dp',  action='store_false',        help="Disable Plot")
+    parser.add_argument('-norm_origin', '-no',  action='store_true',         help="Normalizes each variable's data at the beginning of time")
 
     args = parser.parse_args()
 
@@ -641,16 +668,35 @@ def parse_arguments():
 
         file_data.append((file_path, label))
 
-    return args.plot_type,args.axis_title,args.axis_dim, args.skip_row, usecols, args.save_plot, args.save_data, args.x_min, args.x_max, args.scale, args.shift, args.fig_title, args.disable_plot, file_data
+    return (
+        args.plot_type, args.fig_title, args.disable_plot,
+        args.axis_title, args.axis_dim, args.x_min, args.x_max,
+        args.skip_row, usecols, args.scale, args.shift, args.norm_origin,
+        args.save_plot, args.save_data,
+        file_data,
+    )
 
 
 if __name__ == "__main__":
 
-    plot_type, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, fig_title, disable_plot, file_data = parse_arguments()
+    (
+        plot_type, fig_title, disable_plot,
+        axis_title, axis_dim, x_min, x_max,
+        skip_row, usecols, scale, shift, norm_origin,
+        save_plot, save_data,
+        file_data
+    ) = parse_arguments()
 
     if not plot_type or not file_data:
         if pyqt_available:
-            plot_type, fig_title, axis_title, axis_dim, skip_row, usecols, save_plot, save_data, x_min, x_max, scale_value, shift_value, file_data, plotflag = interactive_plot_type_selection_QT()
+            (
+                plot_type, fig_title, plotflag,
+                axis_title, axis_dim, x_min, x_max,
+                skip_row, usecols, scale, shift, norm_origin,
+                save_plot, save_data,
+                file_data
+            ) = interactive_plot_type_selection_QT()
+
             if not plotflag:
                 sys.exit(1)
         else: 
@@ -667,8 +713,9 @@ if __name__ == "__main__":
     print(f"Axis dimension: {axis_dim}")
     print(f"Skiped rows: {skip_row}") if skip_row else None
     print(f"Used columns: {usecols}") if usecols else None
-    print(f"Scale value: {scale_value}") if scale_value != 1 else None
-    print(f"Shift value: {shift_value}") if shift_value != 0 else None
+    print(f"Scale value: {scale}") if scale != 1 else None
+    print(f"Shift value: {shift}") if shift != 0 else None
+    print(f"Normalized to the origin") if norm_origin != 0 else None
     if x_min or x_max:
         print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
     print()
@@ -678,6 +725,7 @@ if __name__ == "__main__":
     
     # Parse data from all files
     parsed_data = extract_data()
+    if norm_origin: normalize_to_origin(parsed_data)
 
     # Generate the dynamic plot and get the figure object
     fig = plot(disable_plot)
