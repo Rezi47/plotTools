@@ -258,7 +258,6 @@ def interactive_plot_type_selection_QT():
     axis_dim = None
     skip_row = None
     usecols = None
-    plotflag = False
 
     def update_values():
         nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
@@ -307,13 +306,11 @@ def interactive_plot_type_selection_QT():
         window.adjustSize()
 
     def plot_button_clicked():
-        nonlocal plotflag
         if not files:
             QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
             return
         
         update_values()
-        plotflag = True
         parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
         plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
@@ -325,10 +322,9 @@ def interactive_plot_type_selection_QT():
             return
         
         update_values()
-        plotflag = True
-        parsed_data = extract_data(files)
+        parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
-        fig = plot(parsed_data, labels, disable_plot)
+        fig = plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
         save_plot_func(fig)
     
     def write_data_button_clicked():
@@ -337,8 +333,7 @@ def interactive_plot_type_selection_QT():
             return
         
         update_values()
-        plotflag = True
-        parsed_data = extract_data(files)
+        parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
         save_data_func(parsed_data, labels, fig_title)
 
@@ -542,7 +537,7 @@ def interactive_plot_type_selection_QT():
     app.exec_()
 
     return (
-        plot_type, fig_title, plotflag,
+        plot_type, fig_title,
         axis_title, axis_dim, x_min, x_max,
         skip_row, usecols, scale, shift, norm_origin,
         files, labels
@@ -675,15 +670,12 @@ if __name__ == "__main__":
     if not plot_type or not files:
         if pyqt_available:
             (
-                plot_type, fig_title, plotflag,
+                plot_type, fig_title,
                 axis_title, axis_dim, x_min, x_max,
                 skip_row, usecols, scale, shift, norm_origin,
-                save_plot, save_data,
                 files, labels
             ) = interactive_plot_type_selection_QT()
 
-            if not plotflag:
-                sys.exit(1)
         else: 
             plot_type = interactive_plot_type_selection_TK() 
 
