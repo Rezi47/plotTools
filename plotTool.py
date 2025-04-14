@@ -83,7 +83,7 @@ fig_config = {
     },
 }
 
-def extract_data():
+def extract_data(files):
     parsed_data = []
 
     # for file in files:
@@ -119,7 +119,7 @@ def normalize_to_origin(parsed_data):
             if len(var_array) > 0:
                 first_value = np.mean(var_array)
                 var_array -= first_value  # Subtract first value in-place (modifies original array)
-def plot(disable_plot):
+def plot(parsed_data, labels, disable_plot):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
@@ -167,61 +167,56 @@ def plot(disable_plot):
 
     return fig
 
-def save_func():
-    """
-    Saves plots and extracted data for a given fig_type.
-    """
-    # Save or show the plot
-    if save_plot:
-        output_dir = "."
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        fig.savefig(os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}{axis_title}.png"))
-        print(f"Figure saved to {output_dir}/{fig_title + '_' if fig_title else ''}{axis_title}.png")
+def save_plot_func(fig):
+    """Saves the plot to a file"""
+    output_dir = "."
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    fig.savefig(os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}{axis_title}.png"))
+    print(f"Figure saved to {output_dir}/{fig_title + '_' if fig_title else ''}{axis_title}.png")
 
-    # Save extracted data if enabled
-    if save_data:
-        base_dir = os.path.dirname(files[0]) if files else ""
-        output_dir = os.path.join(base_dir, "extractedData")
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+def save_data_func(parsed_data, labels, fig_title):
+    base_dir = os.path.dirname(files[0]) if files else ""
+    output_dir = os.path.join(base_dir, "extractedData")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-        # First determine the maximum number of variables across all datasets
-        max_vars = max(len(variables) for _, variables in parsed_data)
+    # First determine the maximum number of variables across all datasets
+    max_vars = max(len(variables) for _, variables in parsed_data)
 
-        # Create one file per variable index
-        for var_idx in range(max_vars):
-            # Create filename for this variable index
-            file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}Variable_{var_idx+1}.csv")
+    # Create one file per variable index
+    for var_idx in range(max_vars):
+        # Create filename for this variable index
+        file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}Variable_{var_idx+1}.csv")
+        
+        with open(file_path, 'w') as f:
+            # Write header - Time columns for each dataset that has this variable
+            headers = []
+            for label, (times, variables) in zip(labels, parsed_data):
+                if var_idx < len(variables):
+                    headers.append(f"Time_{label}")
+                    headers.append(f"Data_{label}")
+            f.write(",".join(headers) + "\n")
             
-            with open(file_path, 'w') as f:
-                # Write header - Time columns for each dataset that has this variable
-                headers = []
-                for label, (times, variables) in zip(labels, parsed_data):
+            # Find maximum time length across datasets that have this variable
+            relevant_datasets = [times for times, variables in parsed_data if var_idx < len(variables)]
+            max_length = max(len(times) for times in relevant_datasets) if relevant_datasets else 0
+            
+            # Write data rows
+            for row_idx in range(max_length):
+                row_data = []
+                for (times, variables), label in zip(parsed_data, labels):
                     if var_idx < len(variables):
-                        headers.append(f"Time_{label}")
-                        headers.append(f"Data_{label}")
-                f.write(",".join(headers) + "\n")
+                        # Add time value if exists, else empty
+                        time_val = str(times[row_idx]) if row_idx < len(times) else ""
+                        row_data.append(time_val)
+                        # Add variable value if exists, else empty
+                        var_val = str(variables[var_idx][row_idx]) if row_idx < len(variables[var_idx]) else ""
+                        row_data.append(var_val)
                 
-                # Find maximum time length across datasets that have this variable
-                relevant_datasets = [times for times, variables in parsed_data if var_idx < len(variables)]
-                max_length = max(len(times) for times in relevant_datasets) if relevant_datasets else 0
-                
-                # Write data rows
-                for row_idx in range(max_length):
-                    row_data = []
-                    for (times, variables), label in zip(parsed_data, labels):
-                        if var_idx < len(variables):
-                            # Add time value if exists, else empty
-                            time_val = str(times[row_idx]) if row_idx < len(times) else ""
-                            row_data.append(time_val)
-                            # Add variable value if exists, else empty
-                            var_val = str(variables[var_idx][row_idx]) if row_idx < len(variables[var_idx]) else ""
-                            row_data.append(var_val)
-                    
-                    f.write(",".join(row_data) + "\n")
-            
-            print(f"Saved Variable {var_idx+1} data in: {file_path}")
+                f.write(",".join(row_data) + "\n")
+        
+        print(f"Saved Variable {var_idx+1} data in: {file_path}")
             
 def interactive_plot_type_selection_TK():
     root = tk.Tk()
@@ -251,8 +246,6 @@ def interactive_plot_type_selection_TK():
 
 def interactive_plot_type_selection_QT():
     plot_type = None
-    save_plot = False
-    save_data = False
     x_min = None
     x_max = None
     scale = 1
@@ -268,13 +261,11 @@ def interactive_plot_type_selection_QT():
     plotflag = False
 
     def update_values():
-        nonlocal plot_type, save_plot, save_data, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
+        nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
         # Update the current values from the UI elements
         axis_title = axis_title_input.text() if axis_title_input.text() else None
         fig_title = fig_title_input.text() if fig_title_input.text() else None
         axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
-        save_plot = save_plot_checkbox.isChecked()
-        save_data = save_data_checkbox.isChecked()
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
         scale = float(scale_input.text()) if scale_input.text() else 1
@@ -316,16 +307,41 @@ def interactive_plot_type_selection_QT():
         window.adjustSize()
 
     def plot_button_clicked():
-        nonlocal plotflag
+        nonlocal plotflag, x_min, x_max
 
         if not files:
             QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
             return
         
-        # Update values before closing the window
         update_values()
         plotflag = True
-        window.close()
+        parsed_data = extract_data(files)
+        if norm_origin: normalize_to_origin(parsed_data)
+        plot(parsed_data, labels, disable_plot)
+        # window.close()
+
+    def write_plot_button_clicked():
+        if not files:
+            QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
+            return
+        
+        update_values()
+        plotflag = True
+        parsed_data = extract_data(files)
+        if norm_origin: normalize_to_origin(parsed_data)
+        fig = plot(parsed_data, labels, disable_plot)
+        save_plot_func(fig)
+    
+    def write_data_button_clicked():
+        if not files:
+            QMessageBox.critical(window, "Error", "Please select at least one file to process.")
+            return
+        
+        update_values()
+        plotflag = True
+        parsed_data = extract_data(files)
+        if norm_origin: normalize_to_origin(parsed_data)
+        save_data_func(parsed_data, labels, fig_title)
 
     def update_file_paths(file_paths, file_labels):
         nonlocal files, labels
@@ -468,35 +484,6 @@ def interactive_plot_type_selection_QT():
     x_layout.setAlignment(Qt.AlignLeft)
     layout.addLayout(x_layout)
 
-    ########### Add the 4rd horizontal line separator ###########
-    layout.addWidget(create_horizontal_line())
-
-    # Add input fields for "x min" and "x max" in the same row
-    # Add checkboxes for "Save Plot" and "Save Data" in separate rows
-    save_plot_layout = QHBoxLayout()
-    save_plot_checkbox = QCheckBox("Save Plot")
-    save_plot_text_label = QLabel(" Figure will be saved in: ./*_comparison.png")
-    save_plot_text_label.setStyleSheet("color: gray;")  # Make text gray
-    save_plot_text_label.setVisible(False)  # Hide initially
-    save_plot_layout.addWidget(save_plot_checkbox)
-    save_plot_layout.addWidget(save_plot_text_label)
-    save_plot_layout.setAlignment(Qt.AlignLeft)  # Align to the left
-    layout.addLayout(save_plot_layout)
-
-    save_data_layout = QHBoxLayout()
-    save_data_checkbox = QCheckBox("Save Data")
-    save_data_text_label = QLabel(" Extracted data will be saved in: /extractedData/*.csv")
-    save_data_text_label.setStyleSheet("color: gray;")  # Make text gray
-    save_data_text_label.setVisible(False)  # Hide initially
-    save_data_layout.addWidget(save_data_checkbox)
-    save_data_layout.addWidget(save_data_text_label)
-    save_data_layout.setAlignment(Qt.AlignLeft)  # Align to the left
-    layout.addLayout(save_data_layout)
-
-    # Connect the checkboxes to show/hide the gray text
-    save_plot_checkbox.toggled.connect(lambda checked: save_plot_text_label.setVisible(checked))
-    save_data_checkbox.toggled.connect(lambda checked: save_data_text_label.setVisible(checked))
-
     ########### Add the 5th horizontal line separator ###########
     layout.addWidget(create_horizontal_line())
   
@@ -505,19 +492,35 @@ def interactive_plot_type_selection_QT():
     file_selector.files_updated.connect(update_file_paths)
     layout.addWidget(file_selector)
 
-    # Add the final "Plot" button to execute selection
-    plot_button = QPushButton("🖨️Plot")
+    button_layout = QHBoxLayout()
+    
+    plot_button = QPushButton("👁️ Plot")
     plot_button.clicked.connect(plot_button_clicked)
     plot_button.setFixedSize(120, 40)
-    plot_button.setStyleSheet("""
-    font-size: 15px;              /* Increase font size */
-    font-weight: bold;           /* Make the text bold */
-    padding: 3px;                /* Add internal padding for better spacing */
-    color: white;                /* Set text color */
-    background-color: #007BFF;   /* Set button background color (Bootstrap primary blue) */
-    border-radius: 3px;         /* Add rounded corners */
-    """)
-    layout.addWidget(plot_button, alignment=Qt.AlignCenter)
+    
+    write_plot_button = QPushButton("💾 Save Plot")
+    write_plot_button.clicked.connect(write_plot_button_clicked)
+    write_plot_button.setFixedSize(120, 40)
+    
+    write_data_button = QPushButton("📊 Save Data")
+    write_data_button.clicked.connect(write_data_button_clicked)
+    write_data_button.setFixedSize(120, 40)
+    
+    # Style all buttons consistently
+    for button in [plot_button, write_plot_button, write_data_button]:
+        button.setStyleSheet("""
+        font-size: 15px;
+        font-weight: bold;
+        padding: 3px;
+        color: white;
+        background-color: #007BFF;
+        border-radius: 3px;
+        """)
+    
+    button_layout.addWidget(plot_button)
+    button_layout.addWidget(write_plot_button)
+    button_layout.addWidget(write_data_button)
+    layout.addLayout(button_layout)
 
     # Set the layout and show the window
     window.setLayout(layout)
@@ -543,7 +546,6 @@ def interactive_plot_type_selection_QT():
         plot_type, fig_title, plotflag,
         axis_title, axis_dim, x_min, x_max,
         skip_row, usecols, scale, shift, norm_origin,
-        save_plot, save_data,
         files, labels
     )
 
@@ -704,11 +706,3 @@ if __name__ == "__main__":
         print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
     print()
     
-    # Parse data from all files
-    parsed_data = extract_data()
-    if norm_origin: normalize_to_origin(parsed_data)
-
-    # Generate the dynamic plot and get the figure object
-    fig = plot(disable_plot)
-
-    save_func()
