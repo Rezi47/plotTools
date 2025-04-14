@@ -258,7 +258,8 @@ def interactive_plot_type_selection_QT():
     scale = 1
     shift = 0
     norm_origin = False
-    file_data = []
+    files = []
+    labels = []
     fig_title = None
     axis_title = None
     axis_dim = None
@@ -317,7 +318,7 @@ def interactive_plot_type_selection_QT():
     def plot_button_clicked():
         nonlocal plotflag
 
-        if not file_data:
+        if not files:
             QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
             return
         
@@ -326,9 +327,10 @@ def interactive_plot_type_selection_QT():
         plotflag = True
         window.close()
 
-    def update_file_paths(file_paths):
-        nonlocal file_data  # Use nonlocal to modify the variable
-        file_data = file_paths
+    def update_file_paths(file_paths, file_labels):
+        nonlocal files, labels
+        files = file_paths
+        labels = file_labels
         
     def create_horizontal_line():
         line = QFrame()
@@ -500,7 +502,7 @@ def interactive_plot_type_selection_QT():
   
     # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
-    file_selector.files_data_updated.connect(update_file_paths)
+    file_selector.files_updated.connect(update_file_paths)
     layout.addWidget(file_selector)
 
     # Add the final "Plot" button to execute selection
@@ -542,92 +544,72 @@ def interactive_plot_type_selection_QT():
         axis_title, axis_dim, x_min, x_max,
         skip_row, usecols, scale, shift, norm_origin,
         save_plot, save_data,
-        file_data
+        files, labels
     )
 
 class FileSelectorApp(QWidget):
-    files_data_updated = pyqtSignal(list)  # Signal to emit when file paths are updated
+    files_updated = pyqtSignal(list, list)  # Now emits two separate lists
 
     def __init__(self):
         super().__init__()
+        self.files = []  # List to store file paths
+        self.labels = []  # List to store labels
         self.init_ui()
 
     def init_ui(self):
         self.setWindowTitle("File Selector")
         self.layout = QVBoxLayout()
-        self.file_data = []  # List to store file data (path, label)
-
-        # Add the initial file row
         self.add_file_row()
-
         self.setLayout(self.layout)
 
     def add_file_row(self):
-        # Create a new row layout
         file_row_layout = QHBoxLayout()
 
-        # Create "Browse" button and file path display
         browse_button = QPushButton("Browse")
         file_path_box = QLineEdit()
         file_path_box.setReadOnly(True)
-
-        # Label input field
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
 
-        # Connect label input changes to update the file data
-        label_input.textChanged.connect(self.update_values)
-
-        # Use functools.partial to pass parameters to select_file
+        # Connect signals
         browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input))
+        label_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input))
 
-        # Add widgets to the row layout
         file_row_layout.addWidget(browse_button)
         file_row_layout.addWidget(file_path_box)
         file_row_layout.addWidget(QLabel("Label:"))
         file_row_layout.addWidget(label_input)
-
-        # Add the row layout to the main layout
         self.layout.addLayout(file_row_layout)
 
     def select_file(self, file_path_box, label_input):
-        # Open file dialog
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select File")
         if file_path:
-            # Extract and display only the last part of the file path
             file_name = os.path.basename(file_path)
             dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
             file_path_box.setText(file_name)
-
-            # Store the full file path in the widget's object data
             file_path_box.setProperty("full_path", file_path)
-
-            # Set placeholder text in the label input
             label_input.setPlaceholderText(dir_name)
-
-            # Automatically update the file data
-            self.update_values()
-
-            # Automatically add a new row after the user selects a file
+            self.update_values(file_path_box, label_input)
             self.add_file_row()
 
-    def update_values(self):
-        # Update file data with current file paths and labels
-        self.file_data = []
+    def update_values(self, file_path_box=None, label_input=None):
+        self.files = []
+        self.labels = []
+        
         for file_row in self.layout.children():
             if isinstance(file_row, QHBoxLayout):
-                file_path_box = file_row.itemAt(1).widget()  # File path box is the second widget
-                label_input = file_row.itemAt(3).widget()    # Label input is the fourth widget
-
-                file_path = file_path_box.property("full_path")
-                label = label_input.text().strip() or label_input.placeholderText()
-
-                if file_path:  # Only add data if file path is not empty
-                    self.file_data.append((file_path, label))
-
-        # Emit the updated file data
-        self.files_data_updated.emit(self.file_data)
+                current_file_box = file_row.itemAt(1).widget()
+                current_label_input = file_row.itemAt(3).widget()
+                
+                file_path = current_file_box.property("full_path")
+                label = current_label_input.text().strip() or current_label_input.placeholderText()
+                
+                if file_path:
+                    self.files.append(file_path)
+                    self.labels.append(label)
+        
+        self.files_updated.emit(self.files, self.labels)
     
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process files with labels.")
@@ -654,7 +636,8 @@ def parse_arguments():
     usecols = [int(col) for col in args.cols.split(",") if col.strip().isdigit()] if args.cols else None
 
     # Use argparse for standard file input
-    file_data = []
+    files = []
+    labels = []
     i = 0
     while i < len(args.file_args):
         file_path = args.file_args[i]
@@ -666,14 +649,15 @@ def parse_arguments():
             if args.file_args[i] == "-label": label = args.file_args[i + 1]; i += 2
             else: break
 
-        file_data.append((file_path, label))
+        files.append(file_path)
+        labels.append(label)
 
     return (
         args.plot_type, args.fig_title, args.disable_plot,
         args.axis_title, args.axis_dim, args.x_min, args.x_max,
         args.skip_row, usecols, args.scale, args.shift, args.norm_origin,
         args.save_plot, args.save_data,
-        file_data,
+        files, labels
     )
 
 
@@ -684,17 +668,17 @@ if __name__ == "__main__":
         axis_title, axis_dim, x_min, x_max,
         skip_row, usecols, scale, shift, norm_origin,
         save_plot, save_data,
-        file_data
+        files, labels
     ) = parse_arguments()
 
-    if not plot_type or not file_data:
+    if not plot_type or not files:
         if pyqt_available:
             (
                 plot_type, fig_title, plotflag,
                 axis_title, axis_dim, x_min, x_max,
                 skip_row, usecols, scale, shift, norm_origin,
                 save_plot, save_data,
-                file_data
+                files, labels
             ) = interactive_plot_type_selection_QT()
 
             if not plotflag:
@@ -702,9 +686,9 @@ if __name__ == "__main__":
         else: 
             plot_type = interactive_plot_type_selection_TK()   
 
-    for file_info in file_data:
-        print("File:", os.path.relpath(file_info[0]))
-        print("Label:", file_info[1])
+    for file_path, label in zip(files, labels):
+        print("File:", os.path.relpath(file_path))
+        print("Label:", label)
         print()
     
     print(f"Plot type: {plot_type}")
@@ -719,9 +703,6 @@ if __name__ == "__main__":
     if x_min or x_max:
         print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
     print()
-
-    files = [entry[0] for entry in file_data]    
-    labels = [entry[1] for entry in file_data]
     
     # Parse data from all files
     parsed_data = extract_data()
