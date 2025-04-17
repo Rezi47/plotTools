@@ -83,7 +83,7 @@ fig_config = {
     },
 }
 
-def extract_data(files):
+def extract_data(files, shift, scale):
     parsed_data = []
 
     # for file in files:
@@ -119,7 +119,7 @@ def normalize_to_origin(parsed_data):
             if len(var_array) > 0:
                 first_value = np.mean(var_array)
                 var_array -= first_value  # Subtract first value in-place (modifies original array)
-def plot(parsed_data, labels, disable_plot):
+def plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
@@ -307,17 +307,16 @@ def interactive_plot_type_selection_QT():
         window.adjustSize()
 
     def plot_button_clicked():
-        nonlocal plotflag, x_min, x_max
-
+        nonlocal plotflag
         if not files:
             QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
             return
         
         update_values()
         plotflag = True
-        parsed_data = extract_data(files)
+        parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
-        plot(parsed_data, labels, disable_plot)
+        plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
         # window.close()
 
     def write_plot_button_clicked():
@@ -624,15 +623,15 @@ def parse_arguments():
     parser.add_argument('-axis_dim',    '-ad',  default="-",                help="Specify a Dimension for y Axis")
     parser.add_argument('-skip_row',    '-sr',  default=0,      type=int,   help="Specify a Number to skip rows of files")
     parser.add_argument('-cols',        '-co',  default=None,               help="Specify columns numbers")
-    parser.add_argument('-save_plot',   '-sp',  action='store_true',        help="Disable saving the plot (default: False)")
-    parser.add_argument('-save_data',   '-sd',  action='store_true',        help="Disable saving the data (default: False)")
     parser.add_argument('-x_min',       '-xmi',                 type=float, help="Minimum x-axis value")
     parser.add_argument('-x_max',       '-xma',                 type=float, help="Maximum x-axis value")
     parser.add_argument('-scale',       '-sc',  default=1,      type=float, help="Scale value")
     parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")
     parser.add_argument('-disable_plot','-dp',  action='store_false',        help="Disable Plot")
     parser.add_argument('-norm_origin', '-no',  action='store_true',         help="Normalizes each variable's data at the beginning of time")
-
+    parser.add_argument('-save_plot',   '-sp',  action='store_true',        help="Disable saving the plot (default: False)")
+    parser.add_argument('-save_data',   '-sd',  action='store_true',        help="Disable saving the data (default: False)")
+    
     args = parser.parse_args()
 
     usecols = [int(col) for col in args.cols.split(",") if col.strip().isdigit()] if args.cols else None
@@ -686,23 +685,32 @@ if __name__ == "__main__":
             if not plotflag:
                 sys.exit(1)
         else: 
-            plot_type = interactive_plot_type_selection_TK()   
+            plot_type = interactive_plot_type_selection_TK() 
 
-    for file_path, label in zip(files, labels):
-        print("File:", os.path.relpath(file_path))
-        print("Label:", label)
+    else:  
+        for file_path, label in zip(files, labels):
+            print("File:", os.path.relpath(file_path))
+            print("Label:", label)
+            print()
+        
+        print(f"Plot type: {plot_type}")
+        print(f"Figure title: {fig_title}") if fig_title else None
+        print(f"Axis title: {axis_title}")
+        print(f"Axis dimension: {axis_dim}")
+        print(f"Skiped rows: {skip_row}") if skip_row else None
+        print(f"Used columns: {usecols}") if usecols else None
+        print(f"Scale value: {scale}") if scale != 1 else None
+        print(f"Shift value: {shift}") if shift != 0 else None
+        print(f"Normalized to the origin") if norm_origin != 0 else None
+        if x_min or x_max:
+            print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
         print()
-    
-    print(f"Plot type: {plot_type}")
-    print(f"Figure title: {fig_title}") if fig_title else None
-    print(f"Axis title: {axis_title}")
-    print(f"Axis dimension: {axis_dim}")
-    print(f"Skiped rows: {skip_row}") if skip_row else None
-    print(f"Used columns: {usecols}") if usecols else None
-    print(f"Scale value: {scale}") if scale != 1 else None
-    print(f"Shift value: {shift}") if shift != 0 else None
-    print(f"Normalized to the origin") if norm_origin != 0 else None
-    if x_min or x_max:
-        print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
-    print()
-    
+
+        parsed_data = extract_data(files)
+        if norm_origin: normalize_to_origin(parsed_data)
+        fig = plot(parsed_data, labels, disable_plot)
+
+        if save_plot: save_plot_func(fig)
+        if save_data: save_data_func(parsed_data, labels, fig_title)
+
+        
