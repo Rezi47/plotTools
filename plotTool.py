@@ -163,7 +163,7 @@ def plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot):
 
     # Adjust layout
     plt.tight_layout()
-    if disable_plot: plt.show()
+    if not disable_plot: plt.show()
 
     return fig
 
@@ -313,6 +313,7 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
+        disable_plot = False
         plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
         # window.close()
 
@@ -324,6 +325,7 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
+        disable_plot = True
         fig = plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
         save_plot_func(fig)
     
@@ -622,8 +624,8 @@ def parse_arguments():
     parser.add_argument('-x_max',       '-xma',                 type=float, help="Maximum x-axis value")
     parser.add_argument('-scale',       '-sc',  default=1,      type=float, help="Scale value")
     parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")
-    parser.add_argument('-disable_plot','-dp',  action='store_false',        help="Disable Plot")
-    parser.add_argument('-norm_origin', '-no',  action='store_true',         help="Normalizes each variable's data at the beginning of time")
+    parser.add_argument('-disable_plot','-dp',  action='store_true',        help="Disable Plot")
+    parser.add_argument('-norm_origin', '-no',  action='store_true',        help="Normalizes each variable's data at the beginning of time")
     parser.add_argument('-save_plot',   '-sp',  action='store_true',        help="Disable saving the plot (default: False)")
     parser.add_argument('-save_data',   '-sd',  action='store_true',        help="Disable saving the data (default: False)")
     
@@ -698,9 +700,9 @@ if __name__ == "__main__":
             print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
         print()
 
-        parsed_data = extract_data(files)
+        parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
-        fig = plot(parsed_data, labels, disable_plot)
+        fig = plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
 
         if save_plot: save_plot_func(fig)
         if save_data: save_data_func(parsed_data, labels, fig_title)
