@@ -19,13 +19,52 @@ try:
     import os
     pyqt_available = True
     from functools import partial
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.figure import Figure
 except ImportError:
     pyqt_available = False
     import tkinter as tk
     from tkinter import filedialog
 
 app = QApplication(sys.argv)
-          
+
+class PlotCanvas(FigureCanvas):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        super().__init__(self.fig)
+        self.setParent(parent)
+        self.axs = []  # Store axes for dynamic plotting
+
+    def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title=None, axis_dim=None):
+        self.fig.clear()  # Clear the figure for new plots
+        colors = ['b', 'r', 'g', 'c', 'm', 'y']
+        linestyles = ['-', '--', ':', '-.']
+
+        max_num_variables = max(len(item[1]) for item in parsed_data)
+        self.axs = self.fig.subplots(1, max_num_variables)
+
+        if max_num_variables == 1:
+            self.axs = [self.axs]  # Ensure axs is always a list
+
+        for i in range(max_num_variables):
+            color_cycle = itertools.cycle(colors)
+            linestyle_cycle = itertools.cycle(linestyles)
+            for (times, variables), label in zip(parsed_data, labels):
+                color = next(color_cycle)
+                linestyle = next(linestyle_cycle)
+                self.axs[i].plot(times, variables[i], label=label, linestyle=linestyle, linewidth=1, color=color)
+
+            self.axs[i].set_xlabel(r"t ($s$)")
+            self.axs[i].set_ylabel(fr"{axis_title} (${axis_dim}$)")
+            self.axs[i].set_xlim(
+                left=x_min if x_min is not None else self.axs[i].get_xlim()[0],
+                right=x_max if x_max is not None else self.axs[i].get_xlim()[1]
+            )
+            self.axs[i].legend()
+
+        self.fig.suptitle(fig_title, fontsize=14)
+        self.draw()  # Render the updated plot
+
 def extract_general_values(file_path):
     """
     Reads data from the given file and general values.
@@ -119,51 +158,7 @@ def normalize_to_origin(parsed_data):
             if len(var_array) > 0:
                 first_value = np.mean(var_array)
                 var_array -= first_value  # Subtract first value in-place (modifies original array)
-def plot(parsed_data, labels, x_min, x_max, fig_title):
-    """
-    Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
-    """
 
-    colors = ['b', 'r', 'g', 'c', 'm', 'y']  # color cycle
-    linestyles = ['-', '--', ':', '-.']  # linestyle cycle
-
-    # Maximum length of variable_data
-    max_num_variables = 0
-    for item in parsed_data:
-        current_length = len(item[1])
-        max_num_variables = max(max_num_variables, current_length)
-
-    # Create subplots dynamically
-    fig, axs = plt.subplots(1, max_num_variables, figsize=(5 * max_num_variables, 5))
-
-    if fig_title:
-        fig.suptitle(fig_title, fontsize=14) 
-    
-    if max_num_variables == 1:  # Single subplot case
-        axs = [axs]        
-    # Plot data for each variable
-    for i in range(max_num_variables):
-        # Create cyclic iterators            
-        color_cycle = itertools.cycle(colors)
-        linestyle_cycle = itertools.cycle(linestyles)
-        for (times, variables), label in zip(parsed_data, labels):
-            color = next(color_cycle)
-            linestyle = next(linestyle_cycle)                
-            axs[i].plot(times, variables[i], label=label, linestyle=linestyle, linewidth=1, color=color)
-        
-        # Set subplot titles and labels
-        #axs[i].set_title(f"{axis_title} {i+1}")       
-        axs[i].set_xlabel(r"t ($s$)")
-        axs[i].set_ylabel(fr"{axis_title} (${axis_dim}$)")
-        axs[i].set_xlim(
-            left=x_min if x_min is not None else axs[i].get_xlim()[0],
-            right=x_max if x_max is not None else axs[i].get_xlim()[1]
-        )
-        axs[i].legend()
-
-    # Adjust layout
-    plt.tight_layout()
-    return fig
 
 def save_plot_func(fig):
     """Saves the plot to a file"""
@@ -259,7 +254,6 @@ def interactive_plot_type_selection_QT():
 
     def update_values():
         nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
-        # Update the current values from the UI elements
         axis_title = axis_title_input.text() if axis_title_input.text() else None
         fig_title = fig_title_input.text() if fig_title_input.text() else None
         axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
@@ -311,9 +305,9 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
-        plot(parsed_data, labels, x_min, x_max, fig_title)
-        plt.show()
-        # window.close()
+        canvas.plot(parsed_data, labels, x_min, x_max, fig_title)
+        # plot(parsed_data, labels, x_min, x_max, fig_title)
+        # plt.show()
 
     def write_plot_button_clicked():
         if not files:
@@ -322,10 +316,14 @@ def interactive_plot_type_selection_QT():
         
         update_values()
         parsed_data = extract_data(files, shift, scale)
-        if norm_origin: normalize_to_origin(parsed_data)
-        fig = plot(parsed_data, labels, x_min, x_max, fig_title)
-        save_plot_func(fig)
-        plt.close(fig)
+        if norm_origin:
+            normalize_to_origin(parsed_data)
+
+        # Use the PlotCanvas to generate the plot
+        canvas.plot(parsed_data, labels, x_min, x_max, fig_title)
+
+        # Save the plot using the canvas's figure
+        save_plot_func(canvas.fig)
     
     def write_data_button_clicked():
         if not files:
@@ -516,6 +514,10 @@ def interactive_plot_type_selection_QT():
     button_layout.addWidget(write_data_button)
     layout.addLayout(button_layout)
 
+    # Add the Matplotlib canvas
+    canvas = PlotCanvas(window, width=5, height=4, dpi=100)
+    layout.addWidget(canvas)
+
     # Set the layout and show the window
     window.setLayout(layout)
     window.resize(400, 300)
@@ -658,7 +660,6 @@ def parse_arguments():
 
 
 if __name__ == "__main__":
-
     (
         plot_type, fig_title, disable_plot,
         axis_title, axis_dim, x_min, x_max,
@@ -675,11 +676,9 @@ if __name__ == "__main__":
                 skip_row, usecols, scale, shift, norm_origin,
                 files, labels
             ) = interactive_plot_type_selection_QT()
-
-        else: 
-            plot_type = interactive_plot_type_selection_TK() 
-
-    else:  
+        else:
+            plot_type = interactive_plot_type_selection_TK()
+    else:
         for file_path, label in zip(files, labels):
             print("File:", os.path.relpath(file_path))
             print("Label:", label)
@@ -695,14 +694,23 @@ if __name__ == "__main__":
         print(f"Shift value: {shift}") if shift != 0 else None
         print(f"Normalized to the origin") if norm_origin != 0 else None
         if x_min or x_max:
-            print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
+            print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is not None else x_max}")
         print()
 
         parsed_data = extract_data(files, shift, scale)
-        if norm_origin: normalize_to_origin(parsed_data)
-        fig = plot(parsed_data, labels, x_min, x_max, fig_title)
-        plt.show() if not disable_plot else None
-        if save_plot: save_plot_func(fig)
-        if save_data: save_data_func(parsed_data, labels, fig_title)
+        if norm_origin:
+            normalize_to_origin(parsed_data)
 
-        
+        # Create a standalone PlotCanvas instance
+        canvas = PlotCanvas()
+
+        # Show the plot using Matplotlib's interactive mode
+        canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim) if not disable_plot else None
+
+        # Save the plot and data if required
+        if save_plot:
+            save_plot_func(canvas.fig)
+        if save_data:
+            save_data_func(parsed_data, labels, fig_title)
+
+
