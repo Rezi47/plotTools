@@ -119,7 +119,7 @@ def normalize_to_origin(parsed_data):
             if len(var_array) > 0:
                 first_value = np.mean(var_array)
                 var_array -= first_value  # Subtract first value in-place (modifies original array)
-def plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot):
+def plot(parsed_data, labels, x_min, x_max, fig_title):
     """
     Creates dynamic plots for an arbitrary number of variables extracted from multiple files.
     """
@@ -163,8 +163,6 @@ def plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot):
 
     # Adjust layout
     plt.tight_layout()
-    if not disable_plot: plt.show()
-
     return fig
 
 def save_plot_func(fig):
@@ -313,21 +311,21 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
-        disable_plot = False
-        plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
+        plot(parsed_data, labels, x_min, x_max, fig_title)
+        plt.show()
         # window.close()
 
     def write_plot_button_clicked():
         if not files:
-            QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
+            QMessageBox.critical(window, "Error", "Please select at least one file.")
             return
         
         update_values()
         parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
-        disable_plot = True
-        fig = plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
+        fig = plot(parsed_data, labels, x_min, x_max, fig_title)
         save_plot_func(fig)
+        plt.close(fig)
     
     def write_data_button_clicked():
         if not files:
@@ -702,8 +700,8 @@ if __name__ == "__main__":
 
         parsed_data = extract_data(files, shift, scale)
         if norm_origin: normalize_to_origin(parsed_data)
-        fig = plot(parsed_data, labels, x_min, x_max, fig_title, disable_plot)
-
+        fig = plot(parsed_data, labels, x_min, x_max, fig_title)
+        plt.show() if not disable_plot else None
         if save_plot: save_plot_func(fig)
         if save_data: save_data_func(parsed_data, labels, fig_title)
 
