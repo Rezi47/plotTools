@@ -262,12 +262,7 @@ def interactive_plot_type_selection_QT():
         scale = float(scale_input.text()) if scale_input.text() else 1
         shift = float(shift_input.text()) if shift_input.text() else 0
         norm_origin = norm_origin_checkbox.isChecked()
-
-        axis_title_input.setText(fig_config[plot_type]['axisTitle'])
-        axis_dim_input.setText(fig_config[plot_type]['dimension'])
-        scale_input.setText("1")
-        shift_input.setText("0")
-
+        
         # If they are valid integer, use it; otherwise default to 0.
         skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
         usecols_text = usecols_input.text()
@@ -300,10 +295,11 @@ def interactive_plot_type_selection_QT():
         if not files:
             QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
             return
-        
+
         update_values()
         parsed_data = extract_data(files, shift, scale, skip_row, usecols)
-        if norm_origin: normalize_to_origin(parsed_data)
+        if norm_origin:
+            normalize_to_origin(parsed_data)
         canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
 
         # Show the plot panel and adjust sizes
@@ -312,6 +308,14 @@ def interactive_plot_type_selection_QT():
             splitter.setStretchFactor(0, 0)  # Keep settings_panel fixed
             splitter.setStretchFactor(1, 1)  # Allow plot_widget to stretch
             plot_widget.show()  # Show the plot widget
+
+            # Resize the window to fit the new layout
+            current_width = window.width()
+            current_height = window.height()
+            window.resize(current_width + 500, current_height)  # Add extra width for the plot panel
+
+            # Optionally adjust splitter sizes
+            splitter.setSizes([300, 700])  # Allocate space for settings and plot panels
 
     def write_plot_button_clicked():
         if not files:
@@ -406,6 +410,10 @@ def interactive_plot_type_selection_QT():
 
     axis_dim_input.setFixedWidth(70)
 
+    # Set initial values for axis_title_input and axis_dim_input
+    axis_title_input.setText(fig_config['general']['axisTitle'])  # Default to 'general'
+    axis_dim_input.setText(fig_config['general']['dimension'])   # Default to 'general'
+
     # Add widgets to the horizontal layout
     axis_layout.addWidget(axis_title_label)
     axis_layout.addWidget(axis_title_input)
@@ -440,6 +448,7 @@ def interactive_plot_type_selection_QT():
     ########### Add the 3nd horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
 
+    # Add "Scale" and "Shift" fields
     s_layout = QHBoxLayout()
     scale_label = QLabel("Scale:")
     scale_input = QLineEdit()
@@ -449,23 +458,25 @@ def interactive_plot_type_selection_QT():
     scale_input.setFixedWidth(60)
     shift_input.setFixedWidth(60)
 
-    # Add spacing between the labels and inputs
+    # Set initial values for scale_input and shift_input
+    scale_input.setText("1")
+    shift_input.setText("0")
+
+    # Add widgets to the horizontal layout
     s_layout.addWidget(scale_label)
     s_layout.addWidget(scale_input)
-    s_layout.addSpacing(10) # Reduced spacing between scale and shift
+    s_layout.addSpacing(10)  # Reduced spacing between scale and shift
     s_layout.addWidget(shift_label)
     s_layout.addWidget(shift_input)
     s_layout.addStretch()
 
-    # Align elements in the row
-    s_layout.setAlignment(Qt.AlignLeft)
+    settings_layout.addLayout(s_layout)
 
     norm_origin_layout = QHBoxLayout()
     norm_origin_checkbox = QCheckBox("Normalize to the Origin")
     norm_origin_layout.addWidget(norm_origin_checkbox)
     norm_origin_layout.setAlignment(Qt.AlignLeft)  # Align to the left   
 
-    settings_layout.addLayout(s_layout)
     settings_layout.addLayout(norm_origin_layout)
 
     ########### Add the 5th horizontal line separator ###########
