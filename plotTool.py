@@ -29,7 +29,7 @@ except ImportError:
 app = QApplication(sys.argv)
 
 class PlotCanvas(FigureCanvas):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+    def __init__(self, parent=None, width=50, height=40, dpi=1000):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         super().__init__(self.fig)
         self.setParent(parent)
@@ -295,7 +295,6 @@ def interactive_plot_type_selection_QT():
             usecols_label.setEnabled(False)
             usecols_input.setEnabled(False)
         
-        window.adjustSize()
 
     def plot_button_clicked():
         if not files:
@@ -308,8 +307,11 @@ def interactive_plot_type_selection_QT():
         canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
 
         # Show the plot panel and adjust sizes
-        plot_widget.show()
-        splitter.setSizes([1, 4])  # Adjust sizes: 1/5 for settings, 4/5 for plot
+        if not plot_widget.isVisible():
+            splitter.addWidget(plot_widget)  # Add the plot widget to the splitter
+            splitter.setStretchFactor(0, 0)  # Keep settings_panel fixed
+            splitter.setStretchFactor(1, 1)  # Allow plot_widget to stretch
+            plot_widget.show()  # Show the plot widget
 
     def write_plot_button_clicked():
         if not files:
@@ -357,6 +359,14 @@ def interactive_plot_type_selection_QT():
     settings_panel = QWidget()
     settings_layout = QVBoxLayout(settings_panel)
 
+    # Set a fixed width for the settings panel
+    settings_panel.setFixedWidth(450)  # Adjust this value based on your widgets
+    settings_panel.setLayout(settings_layout)
+
+    # Add only the settings panel to the splitter initially
+    splitter.addWidget(settings_panel)
+
+    ########### Add the 1st horizontal line separator ###########
     title_label = QLabel("Select the Plot Type")
     title_label.setAlignment(Qt.AlignCenter)
     title_label.setStyleSheet("font-size: 13px; font-weight: regular; margin-bottom: 10px;")
@@ -384,7 +394,7 @@ def interactive_plot_type_selection_QT():
 
     settings_layout.addLayout(fig_title_layout)
 
-    ########### Add the 1st horizontal line separator ###########
+    ########### Add the 2st horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
 
     # Add some fields right after the plot type buttons
@@ -427,7 +437,7 @@ def interactive_plot_type_selection_QT():
 
     settings_layout.addLayout(data_layout)
 
-    ########### Add the 2st horizontal line separator ###########
+    ########### Add the 3nd horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
 
     s_layout = QHBoxLayout()
@@ -458,7 +468,7 @@ def interactive_plot_type_selection_QT():
     settings_layout.addLayout(s_layout)
     settings_layout.addLayout(norm_origin_layout)
 
-    ########### Add the 3nd horizontal line separator ###########
+    ########### Add the 5th horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
 
     # Add input fields for "x min" and "x max" in the same row
@@ -483,7 +493,7 @@ def interactive_plot_type_selection_QT():
     x_layout.setAlignment(Qt.AlignLeft)
     settings_layout.addLayout(x_layout)
 
-    ########### Add the 5th horizontal line separator ###########
+    ########### Add the 6th horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
   
     # Integrate FileSelectorApp (Browse button functionality)
@@ -526,33 +536,17 @@ def interactive_plot_type_selection_QT():
     plot_layout = QVBoxLayout(plot_widget)
     canvas = PlotCanvas(plot_widget, width=5, height=4, dpi=100)
     plot_layout.addWidget(canvas)
+    plot_widget.setLayout(plot_layout)
     plot_widget.hide()  # Initially hide the plot widget
 
-    # Add panels to the splitter
-    splitter.addWidget(settings_panel)
-    splitter.addWidget(plot_widget)
-
-    # Set stretch factors for dynamic resizing
-    splitter.setStretchFactor(0, 1)  # Settings panel gets less priority
-    splitter.setStretchFactor(1, 4)  # Plot panel gets more priority
-
-    # Initially hide the plot panel
-    splitter.setSizes([1, 0])  # Hide the plot panel initially
-
-    # Add panels to the splitter
-    splitter.addWidget(settings_panel)
-    splitter.addWidget(plot_widget)
-
-    # Set the splitter as the main layout
+    # Add the splitter to the main layout
     main_layout = QVBoxLayout(window)
     main_layout.addWidget(splitter)
     window.setLayout(main_layout)
 
     # Show the main window
-    window.resize(800, 600)
+    window.resize(450, 500)
     window.show()
-
-    # Execute the application
     app.exec_()
 
     return (
