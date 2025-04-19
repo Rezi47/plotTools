@@ -29,7 +29,7 @@ except ImportError:
 app = QApplication(sys.argv)
 
 class PlotCanvas(FigureCanvas):
-    def __init__(self, parent=None, width=50, height=40, dpi=1000):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         super().__init__(self.fig)
         self.setParent(parent)
@@ -41,10 +41,30 @@ class PlotCanvas(FigureCanvas):
         linestyles = ['-', '--', ':', '-.']
 
         max_num_variables = max(len(item[1]) for item in parsed_data)
-        self.axs = self.fig.subplots(1, max_num_variables)
 
+        # Dynamically determine the layout based on max_num_variables
         if max_num_variables == 1:
-            self.axs = [self.axs]  # Ensure axs is always a list
+            rows, cols = 1, 1
+            figsize = (4, 8)  # Width x Height in inches
+        elif max_num_variables == 2:
+            rows, cols = 1, 2
+            figsize = (8, 8)
+        elif max_num_variables == 3:
+            rows, cols = 2, 2
+            figsize = (8, 8)
+        elif max_num_variables == 4:
+            rows, cols = 2, 2
+            figsize = (8, 8)
+        else:
+            rows = (max_num_variables + 1) // 2
+            cols = 2
+            figsize = (8, rows * 4)
+
+        # Resize the figure dynamically
+        self.fig.set_size_inches(figsize)
+
+        # Create subplots dynamically
+        self.axs = self.fig.subplots(rows, cols, squeeze=False).flatten()
 
         for i in range(max_num_variables):
             color_cycle = itertools.cycle(colors)
@@ -61,6 +81,10 @@ class PlotCanvas(FigureCanvas):
                 right=x_max if x_max is not None else self.axs[i].get_xlim()[1]
             )
             self.axs[i].legend()
+
+        # Hide unused subplots
+        for j in range(max_num_variables, len(self.axs)):
+            self.fig.delaxes(self.axs[j])
 
         self.fig.suptitle(fig_title, fontsize=14)
         self.draw()  # Render the updated plot
@@ -309,13 +333,14 @@ def interactive_plot_type_selection_QT():
             splitter.setStretchFactor(1, 1)  # Allow plot_widget to stretch
             plot_widget.show()  # Show the plot widget
 
-            # Resize the window to fit the new layout
-            current_width = window.width()
-            current_height = window.height()
-            window.resize(current_width + 500, current_height)  # Add extra width for the plot panel
-
-            # Optionally adjust splitter sizes
-            splitter.setSizes([300, 700])  # Allocate space for settings and plot panels
+        # Resize the main window dynamically
+        max_num_variables = max(len(item[1]) for item in parsed_data)
+        if max_num_variables <= 2:
+            window.resize(1600, 800)
+        elif max_num_variables <= 4:
+            window.resize(1600, 800)
+        else:
+            window.resize(1600, 800 * ((max_num_variables + 1) // 2))
 
     def write_plot_button_clicked():
         if not files:
@@ -329,6 +354,14 @@ def interactive_plot_type_selection_QT():
 
         # Use the PlotCanvas to generate the plot
         canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
+
+        # Resize the window to fit the new layout
+        current_width = window.width()
+        current_height = window.height()
+        window.resize(current_width + 500, current_height)  # Add extra width for the plot panel
+
+        # Optionally adjust splitter sizes
+        splitter.setSizes([300, 700])  # Allocate space for settings and plot panels
 
         # Save the plot using the canvas's figure
         save_plot_func(canvas.fig)
@@ -556,7 +589,7 @@ def interactive_plot_type_selection_QT():
     window.setLayout(main_layout)
 
     # Show the main window
-    window.resize(450, 500)
+    window.adjustSize()
     window.show()
     app.exec_()
 
