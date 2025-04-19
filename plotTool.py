@@ -12,7 +12,7 @@ try:
     from PyQt5.QtWidgets import (
     QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, 
     QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, 
-    QFrame, QTextEdit, QMainWindow, QMessageBox
+    QFrame, QTextEdit, QMainWindow, QMessageBox, QSplitter
     )
     from PyQt5.QtGui import QGuiApplication, QDoubleValidator
     import sys
@@ -35,7 +35,7 @@ class PlotCanvas(FigureCanvas):
         self.setParent(parent)
         self.axs = []  # Store axes for dynamic plotting
 
-    def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title=None, axis_dim=None):
+    def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim):
         self.fig.clear()  # Clear the figure for new plots
         colors = ['b', 'r', 'g', 'c', 'm', 'y']
         linestyles = ['-', '--', ':', '-.']
@@ -65,7 +65,7 @@ class PlotCanvas(FigureCanvas):
         self.fig.suptitle(fig_title, fontsize=14)
         self.draw()  # Render the updated plot
 
-def extract_general_values(file_path):
+def extract_general_values(file_path, skip_row, usecols):
     """
     Reads data from the given file and general values.
     """
@@ -77,7 +77,7 @@ def extract_general_values(file_path):
     variable_data = data[:, 1:].T
     return times, variable_data
                 
-def extract_motion_values(file_path):
+def extract_motion_values(file_path, skip_row, usecols):
     """
     Reads data from the given file and motion values.
     """
@@ -122,13 +122,13 @@ fig_config = {
     },
 }
 
-def extract_data(files, shift, scale):
+def extract_data(files, shift, scale, skip_row, usecols):
     parsed_data = []
 
     # for file in files:
     for i, file in enumerate(files):
         if plot_type in fig_config:
-            times, variable_data = fig_config[plot_type]['function'](file)
+            times, variable_data = fig_config[plot_type]['function'](file, skip_row, usecols)
         else:
             sys.exit(f"Unknown plot_type: {plot_type}. Available plot_type: {', '.join(fig_config.keys())}")
             
@@ -303,11 +303,13 @@ def interactive_plot_type_selection_QT():
             return
         
         update_values()
-        parsed_data = extract_data(files, shift, scale)
+        parsed_data = extract_data(files, shift, scale, skip_row, usecols)
         if norm_origin: normalize_to_origin(parsed_data)
-        canvas.plot(parsed_data, labels, x_min, x_max, fig_title)
-        # plot(parsed_data, labels, x_min, x_max, fig_title)
-        # plt.show()
+        canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
+
+        # Show the plot panel and adjust sizes
+        plot_widget.show()
+        splitter.setSizes([1, 4])  # Adjust sizes: 1/5 for settings, 4/5 for plot
 
     def write_plot_button_clicked():
         if not files:
@@ -315,12 +317,12 @@ def interactive_plot_type_selection_QT():
             return
         
         update_values()
-        parsed_data = extract_data(files, shift, scale)
+        parsed_data = extract_data(files, shift, scale, skip_row, usecols)
         if norm_origin:
             normalize_to_origin(parsed_data)
 
         # Use the PlotCanvas to generate the plot
-        canvas.plot(parsed_data, labels, x_min, x_max, fig_title)
+        canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
 
         # Save the plot using the canvas's figure
         save_plot_func(canvas.fig)
@@ -331,7 +333,7 @@ def interactive_plot_type_selection_QT():
             return
         
         update_values()
-        parsed_data = extract_data(files, shift, scale)
+        parsed_data = extract_data(files, shift, scale, skip_row, usecols)
         if norm_origin: normalize_to_origin(parsed_data)
         save_data_func(parsed_data, labels, fig_title)
 
@@ -346,20 +348,25 @@ def interactive_plot_type_selection_QT():
         line.setFrameShadow(QFrame.Sunken)
         return line
     
+    # Main window with QSplitter
     window = QWidget()
     window.setWindowTitle("Plot Setting")
-    layout = QVBoxLayout()
+    splitter = QSplitter(Qt.Horizontal)  # Horizontal splitter
+
+    # Left panel (Settings)
+    settings_panel = QWidget()
+    settings_layout = QVBoxLayout(settings_panel)
 
     title_label = QLabel("Select the Plot Type")
     title_label.setAlignment(Qt.AlignCenter)
     title_label.setStyleSheet("font-size: 13px; font-weight: regular; margin-bottom: 10px;")
-    layout.addWidget(title_label)
+    settings_layout.addWidget(title_label)
 
     plot_buttons = {key: QPushButton(config['label']) for key, config in fig_config.items()}
 
     for plot_value, button in plot_buttons.items():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
-        layout.addWidget(button)
+        settings_layout.addWidget(button)
 
     # Auto-click the "general" button
     QTimer.singleShot(100, plot_buttons["general"].click)
@@ -375,10 +382,10 @@ def interactive_plot_type_selection_QT():
     fig_title_layout.addWidget(fig_title_input)
     fig_title_layout.addStretch()
 
-    layout.addLayout(fig_title_layout)
+    settings_layout.addLayout(fig_title_layout)
 
     ########### Add the 1st horizontal line separator ###########
-    layout.addWidget(create_horizontal_line())
+    settings_layout.addWidget(create_horizontal_line())
 
     # Add some fields right after the plot type buttons
     axis_layout = QHBoxLayout()
@@ -397,7 +404,7 @@ def interactive_plot_type_selection_QT():
     axis_layout.addWidget(axis_dim_input)
     axis_layout.addStretch()
 
-    layout.addLayout(axis_layout)
+    settings_layout.addLayout(axis_layout)
 
     # Add "Skip Row" and "Usecols" fields in the same row
     data_layout = QHBoxLayout()
@@ -418,10 +425,10 @@ def interactive_plot_type_selection_QT():
     data_layout.addWidget(usecols_input)
     data_layout.addStretch()
 
-    layout.addLayout(data_layout)
+    settings_layout.addLayout(data_layout)
 
     ########### Add the 2st horizontal line separator ###########
-    layout.addWidget(create_horizontal_line())
+    settings_layout.addWidget(create_horizontal_line())
 
     s_layout = QHBoxLayout()
     scale_label = QLabel("Scale:")
@@ -448,11 +455,11 @@ def interactive_plot_type_selection_QT():
     norm_origin_layout.addWidget(norm_origin_checkbox)
     norm_origin_layout.setAlignment(Qt.AlignLeft)  # Align to the left   
 
-    layout.addLayout(s_layout)
-    layout.addLayout(norm_origin_layout)
+    settings_layout.addLayout(s_layout)
+    settings_layout.addLayout(norm_origin_layout)
 
     ########### Add the 3nd horizontal line separator ###########
-    layout.addWidget(create_horizontal_line())
+    settings_layout.addWidget(create_horizontal_line())
 
     # Add input fields for "x min" and "x max" in the same row
     x_layout = QHBoxLayout()
@@ -474,15 +481,15 @@ def interactive_plot_type_selection_QT():
 
     # Align elements in the row
     x_layout.setAlignment(Qt.AlignLeft)
-    layout.addLayout(x_layout)
+    settings_layout.addLayout(x_layout)
 
     ########### Add the 5th horizontal line separator ###########
-    layout.addWidget(create_horizontal_line())
+    settings_layout.addWidget(create_horizontal_line())
   
     # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
     file_selector.files_updated.connect(update_file_paths)
-    layout.addWidget(file_selector)
+    settings_layout.addWidget(file_selector)
 
     button_layout = QHBoxLayout()
     
@@ -512,28 +519,38 @@ def interactive_plot_type_selection_QT():
     button_layout.addWidget(plot_button)
     button_layout.addWidget(write_plot_button)
     button_layout.addWidget(write_data_button)
-    layout.addLayout(button_layout)
+    settings_layout.addLayout(button_layout)
 
-    # Add the Matplotlib canvas
-    canvas = PlotCanvas(window, width=5, height=4, dpi=100)
-    layout.addWidget(canvas)
+    # Right panel (Plot)
+    plot_widget = QWidget()
+    plot_layout = QVBoxLayout(plot_widget)
+    canvas = PlotCanvas(plot_widget, width=5, height=4, dpi=100)
+    plot_layout.addWidget(canvas)
+    plot_widget.hide()  # Initially hide the plot widget
 
-    # Set the layout and show the window
-    window.setLayout(layout)
-    window.resize(400, 300)
+    # Add panels to the splitter
+    splitter.addWidget(settings_panel)
+    splitter.addWidget(plot_widget)
+
+    # Set stretch factors for dynamic resizing
+    splitter.setStretchFactor(0, 1)  # Settings panel gets less priority
+    splitter.setStretchFactor(1, 4)  # Plot panel gets more priority
+
+    # Initially hide the plot panel
+    splitter.setSizes([1, 0])  # Hide the plot panel initially
+
+    # Add panels to the splitter
+    splitter.addWidget(settings_panel)
+    splitter.addWidget(plot_widget)
+
+    # Set the splitter as the main layout
+    main_layout = QVBoxLayout(window)
+    main_layout.addWidget(splitter)
+    window.setLayout(main_layout)
+
+    # Show the main window
+    window.resize(800, 600)
     window.show()
-
-    skip_row_input.setValidator(QDoubleValidator())
-    x_min_input.setValidator(QDoubleValidator())
-    x_min_input.setValidator(QDoubleValidator())
-    x_max_input.setValidator(QDoubleValidator())
-    scale_input.setValidator(QDoubleValidator())
-    shift_input.setValidator(QDoubleValidator())
-
-    # Center the window on the screen
-    screen = QGuiApplication.primaryScreen()
-    screen_geometry = screen.availableGeometry()
-    window.move(screen_geometry.center() - window.rect().center())
 
     # Execute the application
     app.exec_()
@@ -700,7 +717,7 @@ if __name__ == "__main__":
             print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is not None else x_max}")
         print()
 
-        parsed_data = extract_data(files, shift, scale)
+        parsed_data = extract_data(files, shift, scale, skip_row, usecols)
         if norm_origin:
             normalize_to_origin(parsed_data)
 
