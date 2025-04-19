@@ -333,14 +333,17 @@ def interactive_plot_type_selection_QT():
             splitter.setStretchFactor(1, 1)  # Allow plot_widget to stretch
             plot_widget.show()  # Show the plot widget
 
-        # Resize the main window dynamically
+         # Resize the main window dynamically based on max_num_variables
         max_num_variables = max(len(item[1]) for item in parsed_data)
-        if max_num_variables <= 2:
-            window.resize(1600, 800)
-        elif max_num_variables <= 4:
-            window.resize(1600, 800)
-        else:
-            window.resize(1600, 800 * ((max_num_variables + 1) // 2))
+        rows = (max_num_variables + 1) // 2  # Calculate the number of rows (2 figures per row)
+        cols = 2 if max_num_variables > 1 else 1  # Use 2 columns if more than 1 figure
+
+        # Calculate the new window size
+        new_width = 800 * cols
+        new_height = 400 * rows
+
+        # Resize the window
+        window.resize(new_width, new_height)
 
     def write_plot_button_clicked():
         if not files:
@@ -358,7 +361,7 @@ def interactive_plot_type_selection_QT():
         # Resize the window to fit the new layout
         current_width = window.width()
         current_height = window.height()
-        window.resize(current_width + 500, current_height)  # Add extra width for the plot panel
+        window.resize(current_width + 450, current_height)  # Add extra width for the plot panel
 
         # Optionally adjust splitter sizes
         splitter.setSizes([300, 700])  # Allocate space for settings and plot panels
