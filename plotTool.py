@@ -660,6 +660,9 @@ def parse_arguments():
 
 
 if __name__ == "__main__":
+    # Ensure QApplication is created only once
+    app = QApplication.instance() or QApplication(sys.argv)
+
     (
         plot_type, fig_title, disable_plot,
         axis_title, axis_dim, x_min, x_max,
@@ -701,11 +704,23 @@ if __name__ == "__main__":
         if norm_origin:
             normalize_to_origin(parsed_data)
 
-        # Create a standalone PlotCanvas instance
-        canvas = PlotCanvas()
+        window = QMainWindow()
+        central_widget = QWidget()
+        layout = QVBoxLayout(central_widget)
+        window.setCentralWidget(central_widget)
 
-        # Show the plot using Matplotlib's interactive mode
-        canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim) if not disable_plot else None
+        # Add the Matplotlib canvas
+        canvas = PlotCanvas(window, width=5, height=4, dpi=100)
+        layout.addWidget(canvas)
+
+        # Plot the data
+        canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
+
+        # Show the window
+        window.setWindowTitle("Plot Viewer")
+        window.resize(800, 600)
+        window.show()
+        app.exec_()
 
         # Save the plot and data if required
         if save_plot:
