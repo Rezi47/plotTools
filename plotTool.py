@@ -150,29 +150,41 @@ fig_config = {
     },
 }
 
-def extract_data(files, shift, scale, skip_row, usecols):
+def extract_data(files):
     parsed_data = []
 
-    # for file in files:
-    for i, file in enumerate(files):
+    for file_info in files:
+        file_path = file_info["path"]
+        scale = file_info["scale"]
+        shift = file_info["shift"]
+        norm_origin = file_info["norm_origin"]
+        skip_row = file_info["skip_row"]
+        usecols = file_info["usecols"]
+
         if plot_type in fig_config:
-            times, variable_data = fig_config[plot_type]['function'](file, skip_row, usecols)
+            times, variable_data = fig_config[plot_type]['function'](file_path, skip_row, usecols)
         else:
             sys.exit(f"Unknown plot_type: {plot_type}. Available plot_type: {', '.join(fig_config.keys())}")
-            
+
         # Ensure arrays have the same length
         min_length = min(len(times), len(variable_data[0]))
         times, variable_data = times[:min_length], variable_data[:min_length]
 
-        # # Apply shifts and scaling to each variable if needed
+        # Apply shifts and scaling
         for i, var in enumerate(variable_data):
-            #if i == 0 or i == 2:
-                var = var / scale  # Apply scale        
-                var = var + shift  # Apply shift             
-                variable_data[i] = var
+            var = var / scale
+            var = var + shift
+            variable_data[i] = var
+
+        # Normalize to origin if needed
+        if norm_origin:
+            for var_array in variable_data:
+                if len(var_array) > 0:
+                    first_value = np.mean(var_array)
+                    var_array -= first_value
 
         parsed_data.append((times, variable_data))
-    
+
     return parsed_data
 
 def normalize_to_origin(parsed_data):
@@ -276,16 +288,16 @@ def interactive_plot_type_selection_QT():
     plot_type = None
     x_min = None
     x_max = None
-    scale = 1
-    shift = 0
-    norm_origin = False
-    files = []
-    labels = []
     fig_title = None
     axis_title = None
     axis_dim = None
-    skip_row = None
-    usecols = None
+    files = []
+    labels = []
+    scale = []
+    shift = []
+    skip_row = []
+    usecols = []
+    norm_origin = False
 
     def update_values():
         nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
@@ -294,14 +306,6 @@ def interactive_plot_type_selection_QT():
         axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
-        scale = float(scale_input.text()) if scale_input.text() else 1
-        shift = float(shift_input.text()) if shift_input.text() else 0
-        norm_origin = norm_origin_checkbox.isChecked()
-        
-        # If they are valid integer, use it; otherwise default to 0.
-        skip_row = int(skip_row_input.text()) if skip_row_input.text().isdigit() else 0
-        usecols_text = usecols_input.text()
-        usecols = [int(col) for col in usecols_text.split(",") if col.strip().isdigit()] if usecols_text else None
 
     def set_plot_type(plot_value):
         nonlocal plot_type
@@ -312,19 +316,7 @@ def interactive_plot_type_selection_QT():
         for button in plot_buttons.values():
             button.setStyleSheet('background-color: none')  # Reset all buttons
         plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
-
-        skip_row_label.setEnabled(True)
-        skip_row_input.setEnabled(True)
-        usecols_label.setEnabled(True)
-        usecols_input.setEnabled(True)
-        
-        # Dynamically gray out fields for "Axis Title" and "Dimension" if "motion" is selected
-        if plot_value == 'motion':
-            skip_row_label.setEnabled(False)
-            skip_row_input.setEnabled(False)
-            usecols_label.setEnabled(False)
-            usecols_input.setEnabled(False)
-        
+  
 
     def plot_button_clicked():
         if not files:
@@ -332,10 +324,9 @@ def interactive_plot_type_selection_QT():
             return
 
         update_values()
-        parsed_data = extract_data(files, shift, scale, skip_row, usecols)
-        if norm_origin:
-            normalize_to_origin(parsed_data)
-        canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
+        parsed_data = extract_data(files)
+
+        canvas.plot(parsed_data, [file["label"] for file in files], x_min, x_max, fig_title, axis_title, axis_dim)
 
         # Enable the "Save Plot" button after plotting
         write_plot_button.setEnabled(True)
@@ -379,15 +370,15 @@ def interactive_plot_type_selection_QT():
             return
         
         update_values()
-        parsed_data = extract_data(files, shift, scale, skip_row, usecols)
-        if norm_origin: normalize_to_origin(parsed_data)
+        parsed_data = extract_data(files)
+        # if norm_origin: normalize_to_origin(parsed_data)
         output_dir = save_data_func(parsed_data, labels, fig_title)
         QMessageBox.information(window, "Success", f"Extracted data saved to: {output_dir}")
 
     def update_file_paths(file_paths, file_labels):
-        nonlocal files, labels
-        files = file_paths
-        labels = file_labels
+        nonlocal files
+        files = [{"path": path, "label": label, "scale": 1, "shift": 0, "norm_origin": False, "skip_row": 0, "usecols": None}
+                for path, label in zip(file_paths, file_labels)]
         
     def create_horizontal_line():
         line = QFrame()
@@ -406,7 +397,7 @@ def interactive_plot_type_selection_QT():
     settings_layout.setAlignment(Qt.AlignTop)  # Align all widgets to the top
 
     # Set a fixed width for the settings panel
-    settings_panel.setFixedWidth(450)  # Adjust this value based on your widgets
+    # settings_panel.setFixedWidth(450)  # Adjust this value based on your widgets
     settings_panel.setLayout(settings_layout)
 
     # Add only the settings panel to the splitter initially
@@ -465,61 +456,6 @@ def interactive_plot_type_selection_QT():
     axis_layout.addStretch()
 
     settings_layout.addLayout(axis_layout)
-
-    # Add "Skip Row" and "Usecols" fields in the same row
-    data_layout = QHBoxLayout()
-    skip_row_label = QLabel("Skiped rows:")
-    skip_row_input = QLineEdit()
-    usecols_label = QLabel("Used columns:")
-    usecols_input = QLineEdit()
-    usecols_input.setPlaceholderText("Example: 0,1,2,4")
-
-    # Set fixed width for skip_row_input to allow 3-digit numbers
-    skip_row_input.setFixedWidth(50)
-
-    # Add widgets to the horizontal layout
-    data_layout.addWidget(skip_row_label)
-    data_layout.addWidget(skip_row_input)
-    data_layout.addSpacing(10)  # Add space to align usecols label with the Dimension label
-    data_layout.addWidget(usecols_label)
-    data_layout.addWidget(usecols_input)
-    data_layout.addStretch()
-
-    settings_layout.addLayout(data_layout)
-
-    ########### Add the 3nd horizontal line separator ###########
-    settings_layout.addWidget(create_horizontal_line())
-
-    # Add "Scale" and "Shift" fields
-    s_layout = QHBoxLayout()
-    scale_label = QLabel("Scale:")
-    scale_input = QLineEdit()
-    shift_label = QLabel("Shift:")
-    shift_input = QLineEdit()
-
-    scale_input.setFixedWidth(60)
-    shift_input.setFixedWidth(60)
-
-    # Set initial values for scale_input and shift_input
-    scale_input.setText("1")
-    shift_input.setText("0")
-
-    # Add widgets to the horizontal layout
-    s_layout.addWidget(scale_label)
-    s_layout.addWidget(scale_input)
-    s_layout.addSpacing(10)  # Reduced spacing between scale and shift
-    s_layout.addWidget(shift_label)
-    s_layout.addWidget(shift_input)
-    s_layout.addStretch()
-
-    settings_layout.addLayout(s_layout)
-
-    norm_origin_layout = QHBoxLayout()
-    norm_origin_checkbox = QCheckBox("Normalize to the Origin")
-    norm_origin_layout.addWidget(norm_origin_checkbox)
-    norm_origin_layout.setAlignment(Qt.AlignLeft)  # Align to the left   
-
-    settings_layout.addLayout(norm_origin_layout)
 
     ########### Add the 5th horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
@@ -611,20 +547,12 @@ def interactive_plot_type_selection_QT():
     window.show()
     app.exec_()
 
-    return (
-        plot_type, fig_title,
-        axis_title, axis_dim, x_min, x_max,
-        skip_row, usecols, scale, shift, norm_origin,
-        files, labels
-    )
-
 class FileSelectorApp(QWidget):
-    files_updated = pyqtSignal(list, list)  # Now emits two separate lists
+    files_updated = pyqtSignal(list, list)  # Emits file paths and labels
 
     def __init__(self):
         super().__init__()
-        self.files = []  # List to store file paths
-        self.labels = []  # List to store labels
+        self.files = []  # List to store file dictionaries
         self.init_ui()
 
     def init_ui(self):
@@ -636,11 +564,30 @@ class FileSelectorApp(QWidget):
     def add_file_row(self):
         file_row_layout = QHBoxLayout()
 
-        browse_button = QPushButton("Browse")
+        browse_button = QPushButton("📂")
+        browse_button.setFixedSize(30, 30)
         file_path_box = QLineEdit()
         file_path_box.setReadOnly(True)
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
+
+        scale_input = QLineEdit()
+        scale_input.setPlaceholderText("Scale")
+        scale_input.setFixedWidth(50)
+
+        shift_input = QLineEdit()
+        shift_input.setPlaceholderText("Shift")
+        shift_input.setFixedWidth(50)
+
+        norm_origin_checkbox = QCheckBox("Normalize")
+
+        skip_row_input = QLineEdit()
+        skip_row_input.setPlaceholderText("Skip Rows")
+        skip_row_input.setFixedWidth(50)
+
+        usecols_input = QLineEdit()
+        usecols_input.setPlaceholderText("Used Columns")
+        usecols_input.setFixedWidth(100)
 
         # Connect signals
         browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input))
@@ -650,6 +597,15 @@ class FileSelectorApp(QWidget):
         file_row_layout.addWidget(file_path_box)
         file_row_layout.addWidget(QLabel("Label:"))
         file_row_layout.addWidget(label_input)
+        file_row_layout.addWidget(QLabel("Scale:"))
+        file_row_layout.addWidget(scale_input)
+        file_row_layout.addWidget(QLabel("Shift:"))
+        file_row_layout.addWidget(shift_input)
+        file_row_layout.addWidget(norm_origin_checkbox)
+        file_row_layout.addWidget(QLabel("Skip Rows:"))
+        file_row_layout.addWidget(skip_row_input)
+        file_row_layout.addWidget(QLabel("Used Columns:"))
+        file_row_layout.addWidget(usecols_input)
         self.layout.addLayout(file_row_layout)
 
     def select_file(self, file_path_box, label_input):
@@ -666,7 +622,6 @@ class FileSelectorApp(QWidget):
 
     def update_values(self, file_path_box=None, label_input=None):
         self.files = []
-        self.labels = []
         
         for file_row in self.layout.children():
             if isinstance(file_row, QHBoxLayout):
@@ -677,58 +632,68 @@ class FileSelectorApp(QWidget):
                 label = current_label_input.text().strip() or current_label_input.placeholderText()
                 
                 if file_path:
-                    self.files.append(file_path)
-                    self.labels.append(label)
+                    self.files.append({
+                        "path": file_path,
+                        "label": label,
+                        "scale": 1,
+                        "shift": 0,
+                        "norm_origin": False,
+                        "skip_row": 0,
+                        "usecols": None
+                    })
         
-        self.files_updated.emit(self.files, self.labels)
+        self.files_updated.emit([file["path"] for file in self.files], [file["label"] for file in self.files])
     
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Process files with labels.")
+    parser = argparse.ArgumentParser(description="Process files.")
     parser.add_argument('file_args', nargs=argparse.REMAINDER,
-                       help="List of input files followed by their options: -label (add a label, default: dir_name)"
-                       )
-    parser.add_argument('-plot_type',   '-pt',  default="general",          help=f"Specify the Type of plot: {', '.join(fig_config.keys())}")
-    parser.add_argument('-fig_title',   '-ft',  default=None,               help="Specify a Title for the figure")
-    parser.add_argument('-axis_title',  '-at',  default="Amplitude",        help="Specify a Title for y Axis")
-    parser.add_argument('-axis_dim',    '-ad',  default="-",                help="Specify a Dimension for y Axis")
-    parser.add_argument('-skip_row',    '-sr',  default=0,      type=int,   help="Specify a Number to skip rows of files")
-    parser.add_argument('-cols',        '-co',  default=None,               help="Specify columns numbers")
-    parser.add_argument('-x_min',       '-xmi',                 type=float, help="Minimum x-axis value")
-    parser.add_argument('-x_max',       '-xma',                 type=float, help="Maximum x-axis value")
-    parser.add_argument('-scale',       '-sc',  default=1,      type=float, help="Scale value")
-    parser.add_argument('-shift',       '-sh',  default=0,      type=float, help="Shift value")
-    parser.add_argument('-disable_plot','-dp',  action='store_true',        help="Disable Plot")
-    parser.add_argument('-norm_origin', '-no',  action='store_true',        help="Normalizes each variable's data at the beginning of time")
-    parser.add_argument('-save_plot',   '-sp',  action='store_true',        help="Disable saving the plot (default: False)")
-    parser.add_argument('-save_data',   '-sd',  action='store_true',        help="Disable saving the data (default: False)")
+                        help="List of input files followed by their options: -label, -scale, -shift, -norm_origin, -skip_row, -usecols")
+    parser.add_argument('-plot_type', '-pt', default="general", help=f"Specify the Type of plot: {', '.join(fig_config.keys())}")
+    parser.add_argument('-fig_title', '-ft', default=None, help="Specify a Title for the figure")
+    parser.add_argument('-axis_title', '-at', default="Amplitude", help="Specify a Title for y Axis")
+    parser.add_argument('-axis_dim', '-ad', default="-", help="Specify a Dimension for y Axis")
+    parser.add_argument('-x_min', '-xmi', type=float, help="Minimum x-axis value")
+    parser.add_argument('-x_max', '-xma', type=float, help="Maximum x-axis value")
+    parser.add_argument('-save_plot', '-sp', action='store_true', help="Enable saving the plot as a PNG image")
+    parser.add_argument('-save_data', '-sd', action='store_true', help="Enable saving the extracted data to CSV files")
     
     args = parser.parse_args()
 
-    usecols = [int(col) for col in args.cols.split(",") if col.strip().isdigit()] if args.cols else None
-
-    # Use argparse for standard file input
     files = []
-    labels = []
     i = 0
     while i < len(args.file_args):
         file_path = args.file_args[i]
         dir_name = os.path.basename(os.path.abspath(os.path.dirname(file_path)))
         label = f"{dir_name}"
+        scale = 1
+        shift = 0
+        norm_origin = False
+        skip_row = 0
+        usecols = None
         i += 1
 
         while i < len(args.file_args) and args.file_args[i].startswith('-'):
             if args.file_args[i] == "-label": label = args.file_args[i + 1]; i += 2
+            elif args.file_args[i] == "-scale": scale = float(args.file_args[i + 1]); i += 2
+            elif args.file_args[i] == "-shift": shift = float(args.file_args[i + 1]); i += 2
+            elif args.file_args[i] == "-norm_origin": norm_origin = True; i += 1
+            elif args.file_args[i] == "-skip_row": skip_row = int(args.file_args[i + 1]); i += 2
+            elif args.file_args[i] == "-usecols": usecols = [int(col) for col in args.file_args[i + 1].split(",")]; i += 2
             else: break
 
-        files.append(file_path)
-        labels.append(label)
+        files.append({
+            "path": file_path,
+            "label": label,
+            "scale": scale,
+            "shift": shift,
+            "norm_origin": norm_origin,
+            "skip_row": skip_row,
+            "usecols": usecols
+        })
 
     return (
-        args.plot_type, args.fig_title, args.disable_plot,
-        args.axis_title, args.axis_dim, args.x_min, args.x_max,
-        args.skip_row, usecols, args.scale, args.shift, args.norm_origin,
-        args.save_plot, args.save_data,
-        files, labels
+        args.plot_type, args.fig_title, args.axis_title, args.axis_dim,
+        args.x_min, args.x_max, args.save_plot, args.save_data, files
     )
 
 
@@ -737,45 +702,45 @@ if __name__ == "__main__":
     app = QApplication.instance() or QApplication(sys.argv)
 
     (
-        plot_type, fig_title, disable_plot,
+        plot_type, fig_title,
         axis_title, axis_dim, x_min, x_max,
-        skip_row, usecols, scale, shift, norm_origin,
         save_plot, save_data,
-        files, labels
+        files
     ) = parse_arguments()
+
+    # if not files:
+    #     if pyqt_available:
+    #         files = interactive_plot_type_selection_QT()
+    #     else:
+    #         files = interactive_plot_type_selection_TK()
+    # else:
+    #     parsed_data = extract_data(files)
 
     if not plot_type or not files:
         if pyqt_available:
-            (
-                plot_type, fig_title,
-                axis_title, axis_dim, x_min, x_max,
-                skip_row, usecols, scale, shift, norm_origin,
-                files, labels
-            ) = interactive_plot_type_selection_QT()
+            interactive_plot_type_selection_QT()
         else:
             plot_type = interactive_plot_type_selection_TK()
     else:
-        for file_path, label in zip(files, labels):
-            print("File:", os.path.relpath(file_path))
-            print("Label:", label)
+        for file in files:
+            print("File:", os.path.relpath(file["path"]))
+            print("Label:", file["label"])
+            print(f"Scale value: {file['scale']}") if file["scale"] != 1 else None
+            print(f"Shift value: {file['shift']}") if file["shift"] != 0 else None
+            print(f"Normalized to the origin") if file["norm_origin"] else None
+            print(f"Skiped rows: {file['skip_row']}") if file["skip_row"] else None
+            print(f"Used columns: {file['usecols']}") if file["usecols"] else None
             print()
         
         print(f"Plot type: {plot_type}")
         print(f"Figure title: {fig_title}") if fig_title else None
         print(f"Axis title: {axis_title}")
         print(f"Axis dimension: {axis_dim}")
-        print(f"Skiped rows: {skip_row}") if skip_row else None
-        print(f"Used columns: {usecols}") if usecols else None
-        print(f"Scale value: {scale}") if scale != 1 else None
-        print(f"Shift value: {shift}") if shift != 0 else None
-        print(f"Normalized to the origin") if norm_origin != 0 else None
         if x_min or x_max:
             print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is not None else x_max}")
         print()
 
-        parsed_data = extract_data(files, shift, scale, skip_row, usecols)
-        if norm_origin:
-            normalize_to_origin(parsed_data)
+        parsed_data = extract_data(files)
 
         window = QMainWindow()
         central_widget = QWidget()
@@ -787,7 +752,7 @@ if __name__ == "__main__":
         layout.addWidget(canvas)
 
         # Plot the data
-        canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
+        canvas.plot(parsed_data, [file["label"] for file in files], x_min, x_max, fig_title, axis_title, axis_dim)
 
         # Show the window
         window.setWindowTitle("Plot Viewer")
@@ -799,6 +764,6 @@ if __name__ == "__main__":
         if save_plot:
             save_plot_func(canvas.fig, axis_title, fig_title)
         if save_data:
-            save_data_func(parsed_data, labels, fig_title)
+            save_data_func(parsed_data, [file["label"] for file in files], fig_title)
 
 
