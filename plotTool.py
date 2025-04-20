@@ -188,7 +188,7 @@ def normalize_to_origin(parsed_data):
                 var_array -= first_value  # Subtract first value in-place (modifies original array)
 
 
-def save_plot_func(fig):
+def save_plot_func(fig, axis_title, fig_title):
     """Saves the plot to a file"""
     output_dir = "."
     if not os.path.exists(output_dir):
@@ -369,10 +369,9 @@ def interactive_plot_type_selection_QT():
 
     def write_plot_button_clicked():
         # Save the plot using the canvas's figure
-        sp_file_path = save_plot_func(canvas.fig)
+        update_values()
+        sp_file_path = save_plot_func(canvas.fig, axis_title, fig_title)
         QMessageBox.information(window, "Success", f"Figure saved to: {sp_file_path}")
-
-    
 
     def write_data_button_clicked():
         if not files:
@@ -798,7 +797,7 @@ if __name__ == "__main__":
 
         # Save the plot and data if required
         if save_plot:
-            save_plot_func(canvas.fig)
+            save_plot_func(canvas.fig, axis_title, fig_title)
         if save_data:
             save_data_func(parsed_data, labels, fig_title)
 
