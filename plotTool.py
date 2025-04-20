@@ -193,8 +193,13 @@ def save_plot_func(fig):
     output_dir = "."
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    fig.savefig(os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}{axis_title}.png"))
-    print(f"Figure saved to {output_dir}/{fig_title + '_' if fig_title else ''}{axis_title}.png")
+
+    sp_file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}{axis_title}.png")
+    
+    # Save the figure and print the message
+    fig.savefig(sp_file_path)
+    print(f"Figure saved to {sp_file_path}")
+    return sp_file_path
 
 def save_data_func(parsed_data, labels, fig_title):
     base_dir = os.path.dirname(files[0]) if files else ""
@@ -204,7 +209,7 @@ def save_data_func(parsed_data, labels, fig_title):
 
     # First determine the maximum number of variables across all datasets
     max_vars = max(len(variables) for _, variables in parsed_data)
-
+    
     # Create one file per variable index
     for var_idx in range(max_vars):
         # Create filename for this variable index
@@ -238,7 +243,9 @@ def save_data_func(parsed_data, labels, fig_title):
                 f.write(",".join(row_data) + "\n")
         
         print(f"Saved Variable {var_idx+1} data in: {file_path}")
-            
+    return output_dir
+        
+           
 def interactive_plot_type_selection_TK():
     root = tk.Tk()
     plot_type = []
@@ -330,6 +337,17 @@ def interactive_plot_type_selection_QT():
             normalize_to_origin(parsed_data)
         canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
 
+        # Enable the "Save Plot" button after plotting
+        write_plot_button.setEnabled(True)
+        write_plot_button.setStyleSheet("""
+            font-size: 15px;
+            font-weight: bold;
+            padding: 3px;
+            color: white;
+            background-color: #007BFF;
+            border-radius: 3px;
+        """)
+
         # Show the plot panel and adjust sizes
         if not plot_widget.isVisible():
             splitter.addWidget(plot_widget)  # Add the plot widget to the splitter
@@ -337,7 +355,7 @@ def interactive_plot_type_selection_QT():
             splitter.setStretchFactor(1, 1)  # Allow plot_widget to stretch
             plot_widget.show()  # Show the plot widget
 
-         # Resize the main window dynamically based on max_num_variables
+        # Resize the main window dynamically based on max_num_variables
         max_num_variables = max(len(item[1]) for item in parsed_data)
         rows = (max_num_variables + 1) // 2  # Calculate the number of rows (2 figures per row)
         cols = 2 if max_num_variables > 1 else 1  # Use 2 columns if more than 1 figure
@@ -350,29 +368,12 @@ def interactive_plot_type_selection_QT():
         window.resize(new_width, new_height)
 
     def write_plot_button_clicked():
-        if not files:
-            QMessageBox.critical(window, "Error", "Please select at least one file.")
-            return
-        
-        update_values()
-        parsed_data = extract_data(files, shift, scale, skip_row, usecols)
-        if norm_origin:
-            normalize_to_origin(parsed_data)
-
-        # Use the PlotCanvas to generate the plot
-        canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
-
-        # Resize the window to fit the new layout
-        # current_width = window.width()
-        # current_height = window.height()
-        # window.resize(current_width + 450, current_height)  # Add extra width for the plot panel
-
-        # Optionally adjust splitter sizes
-        # splitter.setSizes([300, 700])  # Allocate space for settings and plot panels
-
         # Save the plot using the canvas's figure
-        save_plot_func(canvas.fig)
+        sp_file_path = save_plot_func(canvas.fig)
+        QMessageBox.information(window, "Success", f"Figure saved to: {sp_file_path}")
+
     
+
     def write_data_button_clicked():
         if not files:
             QMessageBox.critical(window, "Error", "Please select at least one file to process.")
@@ -381,7 +382,8 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files, shift, scale, skip_row, usecols)
         if norm_origin: normalize_to_origin(parsed_data)
-        save_data_func(parsed_data, labels, fig_title)
+        output_dir = save_data_func(parsed_data, labels, fig_title)
+        QMessageBox.information(window, "Success", f"Extracted data saved to: {output_dir}")
 
     def update_file_paths(file_paths, file_labels):
         nonlocal files, labels
@@ -560,6 +562,15 @@ def interactive_plot_type_selection_QT():
     plot_button.setFixedSize(120, 40)
     
     write_plot_button = QPushButton("💾 Save Plot")
+    write_plot_button.setEnabled(False)
+    write_plot_button.setStyleSheet("""
+        font-size: 15px;
+        font-weight: bold;
+        padding: 3px;
+        color: gray;
+        background-color: #d3d3d3;
+        border-radius: 3px;
+    """)
     write_plot_button.clicked.connect(write_plot_button_clicked)
     write_plot_button.setFixedSize(120, 40)
     
