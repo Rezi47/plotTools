@@ -87,6 +87,10 @@ class PlotCanvas(FigureCanvas):
             self.fig.delaxes(self.axs[j])
 
         self.fig.suptitle(fig_title, fontsize=14)
+
+        # Reduce margins around the figure
+        self.fig.tight_layout()
+
         self.draw()  # Render the updated plot
 
 def extract_general_values(file_path, skip_row, usecols):
@@ -339,7 +343,7 @@ def interactive_plot_type_selection_QT():
         cols = 2 if max_num_variables > 1 else 1  # Use 2 columns if more than 1 figure
 
         # Calculate the new window size
-        new_width = 800 * cols
+        new_width = (400 * cols) + 450
         new_height = 400 * rows
 
         # Resize the window
@@ -359,12 +363,12 @@ def interactive_plot_type_selection_QT():
         canvas.plot(parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim)
 
         # Resize the window to fit the new layout
-        current_width = window.width()
-        current_height = window.height()
-        window.resize(current_width + 450, current_height)  # Add extra width for the plot panel
+        # current_width = window.width()
+        # current_height = window.height()
+        # window.resize(current_width + 450, current_height)  # Add extra width for the plot panel
 
         # Optionally adjust splitter sizes
-        splitter.setSizes([300, 700])  # Allocate space for settings and plot panels
+        # splitter.setSizes([300, 700])  # Allocate space for settings and plot panels
 
         # Save the plot using the canvas's figure
         save_plot_func(canvas.fig)
@@ -398,6 +402,7 @@ def interactive_plot_type_selection_QT():
     # Left panel (Settings)
     settings_panel = QWidget()
     settings_layout = QVBoxLayout(settings_panel)
+    settings_layout.setAlignment(Qt.AlignTop)  # Align all widgets to the top
 
     # Set a fixed width for the settings panel
     settings_panel.setFixedWidth(450)  # Adjust this value based on your widgets
