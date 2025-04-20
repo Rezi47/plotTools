@@ -578,7 +578,7 @@ def interactive_plot_type_selection_QT():
     write_data_button.setFixedSize(120, 40)
     
     # Style all buttons consistently
-    for button in [plot_button, write_plot_button, write_data_button]:
+    for button in [plot_button, write_data_button]:
         button.setStyleSheet("""
         font-size: 15px;
         font-weight: bold;
