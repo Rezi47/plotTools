@@ -375,10 +375,9 @@ def interactive_plot_type_selection_QT():
         output_dir = save_data_func(parsed_data, labels, fig_title)
         QMessageBox.information(window, "Success", f"Extracted data saved to: {output_dir}")
 
-    def update_file_paths(file_paths, file_labels):
+    def update_file_paths(updated_files):
         nonlocal files
-        files = [{"path": path, "label": label, "scale": 1, "shift": 0, "norm_origin": False, "skip_row": 0, "usecols": None}
-                for path, label in zip(file_paths, file_labels)]
+        files = updated_files
         
     def create_horizontal_line():
         line = QFrame()
@@ -548,8 +547,7 @@ def interactive_plot_type_selection_QT():
     app.exec_()
 
 class FileSelectorApp(QWidget):
-    files_updated = pyqtSignal(list, list)  # Emits file paths and labels
-
+    files_updated = pyqtSignal(list)  # Emits the entire files list
     def __init__(self):
         super().__init__()
         self.files = []  # List to store file dictionaries
@@ -566,8 +564,10 @@ class FileSelectorApp(QWidget):
 
         browse_button = QPushButton("📂")
         browse_button.setFixedSize(30, 30)
+
         file_path_box = QLineEdit()
         file_path_box.setReadOnly(True)
+        
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
 
@@ -589,9 +589,13 @@ class FileSelectorApp(QWidget):
         usecols_input.setPlaceholderText("Used Columns")
         usecols_input.setFixedWidth(100)
 
-        # Connect signals
-        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input))
-        label_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input))
+        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
+        label_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
+        scale_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
+        shift_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
+        norm_origin_checkbox.stateChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
+        skip_row_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
+        usecols_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
 
         file_row_layout.addWidget(browse_button)
         file_row_layout.addWidget(file_path_box)
@@ -608,7 +612,7 @@ class FileSelectorApp(QWidget):
         file_row_layout.addWidget(usecols_input)
         self.layout.addLayout(file_row_layout)
 
-    def select_file(self, file_path_box, label_input):
+    def select_file(self, file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input):
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select File")
         if file_path:
@@ -617,32 +621,42 @@ class FileSelectorApp(QWidget):
             file_path_box.setText(file_name)
             file_path_box.setProperty("full_path", file_path)
             label_input.setPlaceholderText(dir_name)
-            self.update_values(file_path_box, label_input)
+            self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input)
             self.add_file_row()
 
-    def update_values(self, file_path_box=None, label_input=None):
+    def update_values(self, file_path_box=None, label_input=None, scale_input=None, shift_input=None, norm_origin_checkbox=None, skip_row_input=None, usecols_input=None):
         self.files = []
         
         for file_row in self.layout.children():
             if isinstance(file_row, QHBoxLayout):
                 current_file_box = file_row.itemAt(1).widget()
                 current_label_input = file_row.itemAt(3).widget()
+                current_scale_input = file_row.itemAt(5).widget()
+                current_shift_input = file_row.itemAt(7).widget()
+                current_norm_origin_checkbox = file_row.itemAt(8).widget()
+                current_skip_row_input = file_row.itemAt(10).widget()
+                current_usecols_input = file_row.itemAt(12).widget()
                 
                 file_path = current_file_box.property("full_path")
                 label = current_label_input.text().strip() or current_label_input.placeholderText()
+                scale = float(current_scale_input.text()) if current_scale_input.text() else 1
+                shift = float(current_shift_input.text()) if current_shift_input.text() else 0
+                norm_origin = current_norm_origin_checkbox.isChecked()
+                skip_row = int(current_skip_row_input.text()) if current_skip_row_input.text() else 0
+                usecols = [int(col) for col in current_usecols_input.text().split(",")] if current_usecols_input.text() else None
                 
                 if file_path:
                     self.files.append({
                         "path": file_path,
                         "label": label,
-                        "scale": 1,
-                        "shift": 0,
-                        "norm_origin": False,
-                        "skip_row": 0,
-                        "usecols": None
+                        "scale": scale,
+                        "shift": shift,
+                        "norm_origin": norm_origin,
+                        "skip_row": skip_row,
+                        "usecols": usecols
                     })
         
-        self.files_updated.emit([file["path"] for file in self.files], [file["label"] for file in self.files])
+        self.files_updated.emit(self.files)
     
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process files.")
