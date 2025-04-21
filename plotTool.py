@@ -571,48 +571,22 @@ class FileSelectorApp(QWidget):
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
 
-        scale_input = QLineEdit()
-        scale_input.setPlaceholderText("Scale")
-        scale_input.setFixedWidth(50)
+        settings_button = QPushButton("⚙️ Settings")
+        settings_button.setFixedSize(80, 30)
 
-        shift_input = QLineEdit()
-        shift_input.setPlaceholderText("Shift")
-        shift_input.setFixedWidth(50)
+        # Connect the settings button to open the settings dialog
+        settings_button.clicked.connect(lambda: self.open_settings_dialog(label_input))
 
-        norm_origin_checkbox = QCheckBox("Normalize")
-
-        skip_row_input = QLineEdit()
-        skip_row_input.setPlaceholderText("Skip Rows")
-        skip_row_input.setFixedWidth(50)
-
-        usecols_input = QLineEdit()
-        usecols_input.setPlaceholderText("Used Columns")
-        usecols_input.setFixedWidth(100)
-
-        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
-        label_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
-        scale_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
-        shift_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
-        norm_origin_checkbox.stateChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
-        skip_row_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
-        usecols_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input))
+        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input))
 
         file_row_layout.addWidget(browse_button)
         file_row_layout.addWidget(file_path_box)
         file_row_layout.addWidget(QLabel("Label:"))
         file_row_layout.addWidget(label_input)
-        file_row_layout.addWidget(QLabel("Scale:"))
-        file_row_layout.addWidget(scale_input)
-        file_row_layout.addWidget(QLabel("Shift:"))
-        file_row_layout.addWidget(shift_input)
-        file_row_layout.addWidget(norm_origin_checkbox)
-        file_row_layout.addWidget(QLabel("Skip Rows:"))
-        file_row_layout.addWidget(skip_row_input)
-        file_row_layout.addWidget(QLabel("Used Columns:"))
-        file_row_layout.addWidget(usecols_input)
+        file_row_layout.addWidget(settings_button)
         self.layout.addLayout(file_row_layout)
 
-    def select_file(self, file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input):
+    def select_file(self, file_path_box, label_input, scale_input=None, shift_input=None, norm_origin_checkbox=None, skip_row_input=None, usecols_input=None):
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select File")
         if file_path:
@@ -631,19 +605,19 @@ class FileSelectorApp(QWidget):
             if isinstance(file_row, QHBoxLayout):
                 current_file_box = file_row.itemAt(1).widget()
                 current_label_input = file_row.itemAt(3).widget()
-                current_scale_input = file_row.itemAt(5).widget()
-                current_shift_input = file_row.itemAt(7).widget()
-                current_norm_origin_checkbox = file_row.itemAt(8).widget()
-                current_skip_row_input = file_row.itemAt(10).widget()
-                current_usecols_input = file_row.itemAt(12).widget()
+                current_scale_input = file_row.itemAt(5).widget() if file_row.count() > 5 else None
+                current_shift_input = file_row.itemAt(7).widget() if file_row.count() > 7 else None
+                current_norm_origin_checkbox = file_row.itemAt(8).widget() if file_row.count() > 8 else None
+                current_skip_row_input = file_row.itemAt(10).widget() if file_row.count() > 10 else None
+                current_usecols_input = file_row.itemAt(12).widget() if file_row.count() > 12 else None
                 
                 file_path = current_file_box.property("full_path")
                 label = current_label_input.text().strip() or current_label_input.placeholderText()
-                scale = float(current_scale_input.text()) if current_scale_input.text() else 1
-                shift = float(current_shift_input.text()) if current_shift_input.text() else 0
-                norm_origin = current_norm_origin_checkbox.isChecked()
-                skip_row = int(current_skip_row_input.text()) if current_skip_row_input.text() else 0
-                usecols = [int(col) for col in current_usecols_input.text().split(",")] if current_usecols_input.text() else None
+                scale = float(current_scale_input.text()) if current_scale_input and current_scale_input.text() else 1
+                shift = float(current_shift_input.text()) if current_shift_input and current_shift_input.text() else 0
+                norm_origin = current_norm_origin_checkbox.isChecked() if current_norm_origin_checkbox else False
+                skip_row = int(current_skip_row_input.text()) if current_skip_row_input and current_skip_row_input.text() else 0
+                usecols = [int(col) for col in current_usecols_input.text().split(",")] if current_usecols_input and current_usecols_input.text() else None
                 
                 if file_path:
                     self.files.append({
@@ -657,6 +631,96 @@ class FileSelectorApp(QWidget):
                     })
         
         self.files_updated.emit(self.files)
+
+    def open_settings_dialog(self, label_input):
+        # Get the current settings (you can customize this to fetch existing values)
+        current_settings = {
+            "scale": 1,
+            "shift": 0,
+            "skip_row": 0,
+            "usecols": "",
+            "normalize": False
+        }
+
+        dialog = SettingsDialog(self, **current_settings)
+        if dialog.exec_() == QDialog.Accepted:
+            new_settings = dialog.get_settings()
+            print(f"Updated settings for label '{label_input.text()}': {new_settings}")
+            # You can store these settings in your `files` list or update the UI as needed
+
+class SettingsDialog(QDialog):
+    def __init__(self, parent=None, scale=1, shift=0, skip_row=0, usecols="", normalize=False):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.setFixedSize(300, 250)
+
+        self.scale = scale
+        self.shift = shift
+        self.skip_row = skip_row
+        self.usecols = usecols
+        self.normalize = normalize
+
+        layout = QVBoxLayout()
+
+        # Scale
+        scale_layout = QHBoxLayout()
+        scale_label = QLabel("Scale:")
+        self.scale_input = QLineEdit(str(self.scale))
+        scale_layout.addWidget(scale_label)
+        scale_layout.addWidget(self.scale_input)
+        layout.addLayout(scale_layout)
+
+        # Shift
+        shift_layout = QHBoxLayout()
+        shift_label = QLabel("Shift:")
+        self.shift_input = QLineEdit(str(self.shift))
+        shift_layout.addWidget(shift_label)
+        shift_layout.addWidget(self.shift_input)
+        layout.addLayout(shift_layout)
+
+        # Skip Rows
+        skip_row_layout = QHBoxLayout()
+        skip_row_label = QLabel("Skip Rows:")
+        self.skip_row_input = QLineEdit(str(self.skip_row))
+        skip_row_layout.addWidget(skip_row_label)
+        skip_row_layout.addWidget(self.skip_row_input)
+        layout.addLayout(skip_row_layout)
+
+        # Used Columns
+        usecols_layout = QHBoxLayout()
+        usecols_label = QLabel("Used Columns:")
+        self.usecols_input = QLineEdit(self.usecols)
+        usecols_layout.addWidget(usecols_label)
+        usecols_layout.addWidget(self.usecols_input)
+        layout.addLayout(usecols_layout)
+
+        # Normalize
+        normalize_layout = QHBoxLayout()
+        self.normalize_checkbox = QCheckBox("Normalize")
+        self.normalize_checkbox.setChecked(self.normalize)
+        normalize_layout.addWidget(self.normalize_checkbox)
+        layout.addLayout(normalize_layout)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.accept)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(save_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
+    def get_settings(self):
+        return {
+            "scale": float(self.scale_input.text()) if self.scale_input.text() else 1,
+            "shift": float(self.shift_input.text()) if self.shift_input.text() else 0,
+            "skip_row": int(self.skip_row_input.text()) if self.skip_row_input.text() else 0,
+            "usecols": self.usecols_input.text(),
+            "normalize": self.normalize_checkbox.isChecked()
+        }
     
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process files.")
