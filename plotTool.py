@@ -1,30 +1,20 @@
 #!/usr/bin/env python3
 
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import argparse
 import itertools
 from io import StringIO
-import tkinter as tk
-try:
-    from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-    from PyQt5.QtWidgets import (
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from PyQt5.QtWidgets import (
     QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, 
-    QDialog, QLabel, QLineEdit, QDesktopWidget, QCheckBox, QHBoxLayout, 
-    QFrame, QTextEdit, QMainWindow, QMessageBox, QSplitter
-    )
-    from PyQt5.QtGui import QGuiApplication, QDoubleValidator
-    import sys
-    import os
-    pyqt_available = True
-    from functools import partial
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.figure import Figure
-except ImportError:
-    pyqt_available = False
-    import tkinter as tk
-    from tkinter import filedialog
+    QDialog, QLabel, QLineEdit, QCheckBox, QHBoxLayout, 
+    QFrame, QMessageBox, QSplitter
+)
+from functools import partial
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import sys
 
 app = QApplication(sys.argv)
 
@@ -246,32 +236,6 @@ def save_data_func(parsed_data, labels, fig_title):
         print(f"Saved Variable {var_idx+1} data in: {file_path}")
     return output_dir
         
-           
-def interactive_plot_type_selection_TK():
-    root = tk.Tk()
-    plot_type = []
-    def set_plot_type(plot_value):
-        nonlocal plot_type
-        plot_type = plot_value
-        root.quit()
-        root.destroy()
-
-    root.title("Select Plot type")
-    button1 = tk.Button(root, text="motion", command=lambda: set_plot_type('motion'))
-    button1.pack(padx=50, pady=10)
-
-    button2 = tk.Button(root, text="flux", command=lambda: set_plot_type('flux'))
-    button2.pack(padx=50, pady=10)
-
-    button3 = tk.Button(root, text="force", command=lambda: set_plot_type('force'))
-    button3.pack(padx=50, pady=10)
-
-    button4 = tk.Button(root, text="interfaceHeight", command=lambda: set_plot_type('interfaceHeight'))
-    button4.pack(padx=50, pady=10)
-    
-    root.mainloop()
-   
-    return plot_type
 
 def interactive_plot_type_selection_QT():
     plot_type = None
@@ -820,19 +784,10 @@ if __name__ == "__main__":
         files
     ) = parse_arguments()
 
-    # if not files:
-    #     if pyqt_available:
-    #         files = interactive_plot_type_selection_QT()
-    #     else:
-    #         files = interactive_plot_type_selection_TK()
-    # else:
-    #     parsed_data = extract_data(files)
-
     if not plot_type or not files:
-        if pyqt_available:
-            interactive_plot_type_selection_QT()
-        else:
-            plot_type = interactive_plot_type_selection_TK()
+
+        interactive_plot_type_selection_QT()
+
     else:
         for file in files:
             print("File:", os.path.relpath(file["path"]))
