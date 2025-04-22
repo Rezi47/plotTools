@@ -24,6 +24,8 @@ class PlotCanvas(FigureCanvas):
         super().__init__(self.fig)
         self.setParent(parent)
         self.axs = []  # Store axes for dynamic plotting
+        self.individual_figures = {}  # Dictionary to store individual figures
+
 
         # Variables for dragging the title and legends
         self.title = None
@@ -72,6 +74,23 @@ class PlotCanvas(FigureCanvas):
             )
             legend = self.axs[i].legend()
             legend.set_draggable(True)  # Enable draggable legends
+
+            # Save individual figures for each variable
+            fig_individual = Figure(figsize=(fig_width, fig_height), dpi=100)
+            ax_individual = fig_individual.add_subplot(111)
+            for (times, variables), label in zip(parsed_data, labels):
+                ax_individual.plot(times, variables[i], label=label, linestyle=next(linestyle_cycle), linewidth=1, color=next(color_cycle))
+            ax_individual.set_xlabel(r"t ($s$)")
+            ax_individual.set_ylabel(fr"{axis_title} (${axis_dim}$)")
+            ax_individual.set_xlim(
+                left=x_min if x_min is not None else ax_individual.get_xlim()[0],
+                right=x_max if x_max is not None else ax_individual.get_xlim()[1]
+            )
+            ax_individual.legend()
+            fig_individual.tight_layout()
+
+            # Store the individual figure in the dictionary
+            self.individual_figures[f"Variable_{i+1}"] = fig_individual
 
         # Hide unused subplots
         for j in range(max_num_variables, len(self.axs)):
@@ -245,7 +264,7 @@ def normalize_to_origin(parsed_data):
                 var_array -= first_value  # Subtract first value in-place (modifies original array)
 
 
-def save_plot_func(fig, axis_title, fig_title):
+def save_plot_func(fig, individual_figures, axis_title, fig_title):
     """Saves the plot to a file"""
     output_dir = "."
     if not os.path.exists(output_dir):
@@ -256,6 +275,13 @@ def save_plot_func(fig, axis_title, fig_title):
     # Save the figure and print the message
     fig.savefig(sp_file_path)
     print(f"Figure saved to {sp_file_path}")
+
+    # Access the stored figures
+    for variable_name, fig in individual_figures.items():
+        file_path = os.path.join("./individual_figures", f"{variable_name}.png")
+        fig.savefig(file_path)  # Save the figure to a file
+        print(f"Saved {variable_name} to {file_path}")
+    
     return sp_file_path
 
 def save_data_func(parsed_data, labels, fig_title):
@@ -388,7 +414,7 @@ def interactive_plot_type_selection_QT():
     def write_plot_button_clicked():
         # Save the plot using the canvas's figure
         update_values()
-        sp_file_path = save_plot_func(canvas.fig, axis_title, fig_title)
+        sp_file_path = save_plot_func(canvas.fig, canvas.individual_figures, axis_title, fig_title)
         QMessageBox.information(window, "Success", f"Figure saved to: {sp_file_path}")
 
     def write_data_button_clicked():
