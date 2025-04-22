@@ -567,7 +567,14 @@ class FileSelectorApp(QWidget):
 
         file_path_box = QLineEdit()
         file_path_box.setReadOnly(True)
-        
+        file_path_box.setProperty("settings", {
+            "scale": 1,
+            "shift": 0,
+            "norm_origin": False,
+            "skip_row": 0,
+            "usecols": None
+        })  # Initialize default settings
+
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
 
@@ -575,7 +582,7 @@ class FileSelectorApp(QWidget):
         settings_button.setFixedSize(80, 30)
 
         # Connect the settings button to open the settings dialog
-        settings_button.clicked.connect(lambda: self.open_settings_dialog(label_input))
+        settings_button.clicked.connect(lambda: self.open_settings_dialog(file_path_box))
 
         browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input))
 
@@ -595,58 +602,64 @@ class FileSelectorApp(QWidget):
             file_path_box.setText(file_name)
             file_path_box.setProperty("full_path", file_path)
             label_input.setPlaceholderText(dir_name)
-            self.update_values(file_path_box, label_input, scale_input, shift_input, norm_origin_checkbox, skip_row_input, usecols_input)
+            self.update_values()
             self.add_file_row()
 
-    def update_values(self, file_path_box=None, label_input=None, scale_input=None, shift_input=None, norm_origin_checkbox=None, skip_row_input=None, usecols_input=None):
+    def update_values(self):
         self.files = []
-        
+
         for file_row in self.layout.children():
             if isinstance(file_row, QHBoxLayout):
                 current_file_box = file_row.itemAt(1).widget()
                 current_label_input = file_row.itemAt(3).widget()
-                current_scale_input = file_row.itemAt(5).widget() if file_row.count() > 5 else None
-                current_shift_input = file_row.itemAt(7).widget() if file_row.count() > 7 else None
-                current_norm_origin_checkbox = file_row.itemAt(8).widget() if file_row.count() > 8 else None
-                current_skip_row_input = file_row.itemAt(10).widget() if file_row.count() > 10 else None
-                current_usecols_input = file_row.itemAt(12).widget() if file_row.count() > 12 else None
-                
+
                 file_path = current_file_box.property("full_path")
                 label = current_label_input.text().strip() or current_label_input.placeholderText()
-                scale = float(current_scale_input.text()) if current_scale_input and current_scale_input.text() else 1
-                shift = float(current_shift_input.text()) if current_shift_input and current_shift_input.text() else 0
-                norm_origin = current_norm_origin_checkbox.isChecked() if current_norm_origin_checkbox else False
-                skip_row = int(current_skip_row_input.text()) if current_skip_row_input and current_skip_row_input.text() else 0
-                usecols = [int(col) for col in current_usecols_input.text().split(",")] if current_usecols_input and current_usecols_input.text() else None
-                
+                settings = current_file_box.property("settings") or {}
+
+                # Ensure all required keys are present with default values
+                settings = {
+                    "scale": settings.get("scale", 1),
+                    "shift": settings.get("shift", 0),
+                    "norm_origin": settings.get("norm_origin", False),
+                    "skip_row": settings.get("skip_row", 0),
+                    "usecols": settings.get("usecols", None),
+                }
+
                 if file_path:
                     self.files.append({
                         "path": file_path,
                         "label": label,
-                        "scale": scale,
-                        "shift": shift,
-                        "norm_origin": norm_origin,
-                        "skip_row": skip_row,
-                        "usecols": usecols
+                        **settings  # Include the settings directly
                     })
-        
+        print("Updated files list:", self.files)
         self.files_updated.emit(self.files)
 
-    def open_settings_dialog(self, label_input):
-        # Get the current settings (you can customize this to fetch existing values)
-        current_settings = {
-            "scale": 1,
-            "shift": 0,
-            "skip_row": 0,
-            "usecols": "",
-            "normalize": False
-        }
+    def open_settings_dialog(self, file_path_box):
+        file_path = file_path_box.property("full_path")
+        if not file_path:
+            QMessageBox.warning(self, "Warning", "File path is not set for this row.")
+            return
 
-        dialog = SettingsDialog(self, **current_settings)
+        # Get the current settings for this file row
+        current_settings = file_path_box.property("settings")
+
+        dialog = SettingsDialog(
+            self,
+            scale=current_settings["scale"],
+            shift=current_settings["shift"],
+            skip_row=current_settings["skip_row"],
+            usecols=",".join(map(str, current_settings["usecols"])) if current_settings["usecols"] else "",
+            normalize=current_settings["norm_origin"]
+        )
+
         if dialog.exec_() == QDialog.Accepted:
+            # Update the settings for this file row
             new_settings = dialog.get_settings()
-            print(f"Updated settings for label '{label_input.text()}': {new_settings}")
-            # You can store these settings in your `files` list or update the UI as needed
+            file_path_box.setProperty("settings", new_settings)
+
+            # Emit the updated files list
+            self.update_values()
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None, scale=1, shift=0, skip_row=0, usecols="", normalize=False):
@@ -718,8 +731,8 @@ class SettingsDialog(QDialog):
             "scale": float(self.scale_input.text()) if self.scale_input.text() else 1,
             "shift": float(self.shift_input.text()) if self.shift_input.text() else 0,
             "skip_row": int(self.skip_row_input.text()) if self.skip_row_input.text() else 0,
-            "usecols": self.usecols_input.text(),
-            "normalize": self.normalize_checkbox.isChecked()
+            "usecols": [int(col) for col in self.usecols_input.text().split(",")] if self.usecols_input.text() else None,
+            "norm_origin": self.normalize_checkbox.isChecked()
         }
     
 def parse_arguments():
