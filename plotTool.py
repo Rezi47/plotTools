@@ -356,12 +356,13 @@ def interactive_plot_type_selection_QT():
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
 
-        axis_title_input.setText(fig_config[plot_type]['axisTitle'])
-        axis_dim_input.setText(fig_config[plot_type]['dimension'])
+
 
     def set_plot_type(plot_value):
         nonlocal plot_type
         plot_type = plot_value
+        axis_title_input.setText(fig_config[plot_type]['axisTitle'])
+        axis_dim_input.setText(fig_config[plot_type]['dimension'])
         update_values()  # Capture the latest values when plot type is selected
 
         # Change the style of the selected button to indicate it's selected
@@ -513,28 +514,73 @@ def interactive_plot_type_selection_QT():
     ########### Add the 2st horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
 
-    # Add some fields right after the plot type buttons
-    axis_layout = QHBoxLayout()
-    axis_title_label = QLabel("Axis title:")
-    axis_title_input = QLineEdit()
-    axis_dim_label = QLabel("Dimension:")
-    axis_dim_input = QLineEdit()
+    # # Add some fields right after the plot type buttons
+    # axis_layout = QHBoxLayout()
+    # axis_title_label = QLabel("Axis title:")
+    # axis_title_input = QLineEdit()
+    # axis_dim_label = QLabel("Dimension:")
+    # axis_dim_input = QLineEdit()
+    # Add dynamic axis title and dimension rows
+    axis_rows = []  # Keep track of all axis rows for consistent layout
 
-    axis_dim_input.setFixedWidth(70)
+    def add_axis_row():
+        axis_row_layout = QHBoxLayout()
+        axis_title_label = QLabel("Axis title:")
+        axis_title_input = QLineEdit()
+        axis_dim_label = QLabel("Dimension:")
+        axis_dim_input = QLineEdit()
 
-    # Set initial values for axis_title_input and axis_dim_input
-    axis_title_input.setText(fig_config['general']['axisTitle'])  # Default to 'general'
-    axis_dim_input.setText(fig_config['general']['dimension'])   # Default to 'general'
+        # # Set fixed width for input fields
+        # axis_title_input.setFixedWidth(140)
+        # axis_dim_input.setFixedWidth(70)
 
-    # Add widgets to the horizontal layout
-    axis_layout.addWidget(axis_title_label)
-    axis_layout.addWidget(axis_title_input)
-    axis_layout.addSpacing(10)  # Add some space between inputs for better visual separation
-    axis_layout.addWidget(axis_dim_label)
-    axis_layout.addWidget(axis_dim_input)
-    axis_layout.addStretch()
+        # Add widgets to the horizontal layout
+        axis_row_layout.addWidget(axis_title_label)
+        axis_row_layout.addWidget(axis_title_input)
+        axis_row_layout.addSpacing(10)
+        axis_row_layout.addWidget(axis_dim_label)
+        axis_row_layout.addWidget(axis_dim_input)
+        axis_row_layout.addStretch()
 
-    settings_layout.addLayout(axis_layout)
+        # Insert the new row directly under the first row
+        if axis_rows:
+            index = settings_layout.indexOf(axis_rows[0]) + 1
+            settings_layout.insertLayout(index, axis_row_layout)
+        else:
+            settings_layout.addLayout(axis_row_layout)
+
+        # Keep track of the row
+        axis_rows.append(axis_row_layout)
+
+        # Connect signals to dynamically add new rows
+        axis_title_input.textChanged.connect(lambda: check_and_add_row(axis_title_input, axis_dim_input))
+        axis_dim_input.textChanged.connect(lambda: check_and_add_row(axis_title_input, axis_dim_input))
+
+    def check_and_add_row(title_input, dim_input):
+        if title_input.text() or dim_input.text():
+            # Ensure a new row is added only once
+            title_input.textChanged.disconnect()
+            dim_input.textChanged.disconnect()
+            add_axis_row()
+
+    # Add the initial axis row
+    add_axis_row()
+
+    # axis_dim_input.setFixedWidth(70)
+
+    # # Set initial values for axis_title_input and axis_dim_input
+    # axis_title_input.setText(fig_config['general']['axisTitle'])  # Default to 'general'
+    # axis_dim_input.setText(fig_config['general']['dimension'])   # Default to 'general'
+
+    # # Add widgets to the horizontal layout
+    # axis_layout.addWidget(axis_title_label)
+    # axis_layout.addWidget(axis_title_input)
+    # axis_layout.addSpacing(10)  # Add some space between inputs for better visual separation
+    # axis_layout.addWidget(axis_dim_label)
+    # axis_layout.addWidget(axis_dim_input)
+    # axis_layout.addStretch()
+
+    # settings_layout.addLayout(axis_layout)
 
     ########### Add the 5th horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
