@@ -307,6 +307,9 @@ def interactive_plot_type_selection_QT():
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
 
+        axis_title_input.setText(fig_config[plot_type]['axisTitle'])
+        axis_dim_input.setText(fig_config[plot_type]['dimension'])
+
     def set_plot_type(plot_value):
         nonlocal plot_type
         plot_type = plot_value
@@ -396,7 +399,7 @@ def interactive_plot_type_selection_QT():
     settings_layout.setAlignment(Qt.AlignTop)  # Align all widgets to the top
 
     # Set a fixed width for the settings panel
-    # settings_panel.setFixedWidth(450)  # Adjust this value based on your widgets
+    # settings_panel.setFixedWidth(380)  # Adjust this value based on your widgets
     settings_panel.setLayout(settings_layout)
 
     # Add only the settings panel to the splitter initially
@@ -634,7 +637,6 @@ class FileSelectorApp(QWidget):
                         "label": label,
                         **settings  # Include the settings directly
                     })
-        print("Updated files list:", self.files)
         self.files_updated.emit(self.files)
 
     def open_settings_dialog(self, file_path_box):
