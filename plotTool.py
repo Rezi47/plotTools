@@ -26,7 +26,6 @@ class PlotCanvas(FigureCanvas):
         self.axs = []  # Store axes for dynamic plotting
         self.individual_figures = {}  # Dictionary to store individual figures
 
-
         # Variables for dragging the title and legends
         self.title = None
         self.dragging_title = False
@@ -39,7 +38,7 @@ class PlotCanvas(FigureCanvas):
         self.mpl_connect("button_release_event", self.on_release)
 
     def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim, fig_width=4, fig_height=4):
-        self.fig.clear()  # Clear the figure for new plots
+        self.fig.clear()  # Clear the main figure for new plots
         colors = ['b', 'r', 'g', 'c', 'm', 'y']
         linestyles = ['-', '--', ':', '-.']
 
@@ -58,7 +57,10 @@ class PlotCanvas(FigureCanvas):
         # Create subplots dynamically
         self.axs = self.fig.subplots(rows, cols, squeeze=False).flatten()
 
+
+
         for i in range(max_num_variables):
+            # Create color and linestyle cycles once
             color_cycle = itertools.cycle(colors)
             linestyle_cycle = itertools.cycle(linestyles)
             for (times, variables), label in zip(parsed_data, labels):
@@ -75,9 +77,11 @@ class PlotCanvas(FigureCanvas):
             legend = self.axs[i].legend()
             legend.set_draggable(True)  # Enable draggable legends
 
-            # Save individual figures for each variable
+            # Create a new individual figure for each variable
             fig_individual = Figure(figsize=(fig_width, fig_height), dpi=100)
             ax_individual = fig_individual.add_subplot(111)
+            color_cycle = itertools.cycle(colors)
+            linestyle_cycle = itertools.cycle(linestyles)
             for (times, variables), label in zip(parsed_data, labels):
                 ax_individual.plot(times, variables[i], label=label, linestyle=next(linestyle_cycle), linewidth=1, color=next(color_cycle))
             ax_individual.set_xlabel(r"t ($s$)")
