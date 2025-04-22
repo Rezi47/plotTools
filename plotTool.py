@@ -583,6 +583,7 @@ class FileSelectorApp(QWidget):
 
         # Connect the settings button to open the settings dialog
         settings_button.clicked.connect(lambda: self.open_settings_dialog(file_path_box))
+        label_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input))
 
         browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input))
 
@@ -605,7 +606,8 @@ class FileSelectorApp(QWidget):
             self.update_values()
             self.add_file_row()
 
-    def update_values(self):
+    def update_values(self, file_path_box=None, label_input=None):
+
         self.files = []
 
         for file_row in self.layout.children():
