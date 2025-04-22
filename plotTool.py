@@ -35,7 +35,7 @@ class PlotCanvas(FigureCanvas):
         self.setParent(parent)
         self.axs = []  # Store axes for dynamic plotting
 
-    def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim):
+    def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim, fig_width=4, fig_height=4):
         self.fig.clear()  # Clear the figure for new plots
         colors = ['b', 'r', 'g', 'c', 'm', 'y']
         linestyles = ['-', '--', ':', '-.']
@@ -43,22 +43,11 @@ class PlotCanvas(FigureCanvas):
         max_num_variables = max(len(item[1]) for item in parsed_data)
 
         # Dynamically determine the layout based on max_num_variables
-        if max_num_variables == 1:
-            rows, cols = 1, 1
-            figsize = (4, 8)  # Width x Height in inches
-        elif max_num_variables == 2:
-            rows, cols = 1, 2
-            figsize = (8, 8)
-        elif max_num_variables == 3:
-            rows, cols = 2, 2
-            figsize = (8, 8)
-        elif max_num_variables == 4:
-            rows, cols = 2, 2
-            figsize = (8, 8)
-        else:
-            rows = (max_num_variables + 1) // 2
-            cols = 2
-            figsize = (8, rows * 4)
+        rows = (max_num_variables + 1) // 2  # Calculate rows (2 figures per row)
+        cols = 2 if max_num_variables > 1 else 1  # Use 2 columns if more than 1 figure
+
+        # Calculate the overall figure size
+        figsize = (fig_width * cols, fig_height * rows)
 
         # Resize the figure dynamically
         self.fig.set_size_inches(figsize)
@@ -86,7 +75,7 @@ class PlotCanvas(FigureCanvas):
         for j in range(max_num_variables, len(self.axs)):
             self.fig.delaxes(self.axs[j])
 
-        self.fig.suptitle(fig_title, fontsize=14)
+        self.fig.suptitle(fig_title, fontsize=14)  
 
         # Reduce margins around the figure
         self.fig.tight_layout()
@@ -329,7 +318,11 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files)
 
-        canvas.plot(parsed_data, [file["label"] for file in files], x_min, x_max, fig_title, axis_title, axis_dim)
+        # Get user-defined figure dimensions
+        fig_width = float(fig_width_input.text()) if fig_width_input.text() else 4
+        fig_height = float(fig_height_input.text()) if fig_height_input.text() else 4
+
+        canvas.plot(parsed_data, [file["label"] for file in files], x_min, x_max, fig_title, axis_title, axis_dim, fig_width, fig_height)
 
         # Enable the "Save Plot" button after plotting
         write_plot_button.setEnabled(True)
@@ -355,11 +348,12 @@ def interactive_plot_type_selection_QT():
         cols = 2 if max_num_variables > 1 else 1  # Use 2 columns if more than 1 figure
 
         # Calculate the new window size
-        new_width = (400 * cols) + 450
-        new_height = 400 * rows
+        new_width = (fig_width * cols * 100) + 450
+        new_height = fig_height * rows * 100
 
-        # Resize the window
-        window.resize(new_width, new_height)
+        # Resize the window (convert to integers)
+        window.resize(int(new_width), int(new_height))
+        window.adjustSize()
 
     def write_plot_button_clicked():
         # Save the plot using the canvas's figure
@@ -432,6 +426,29 @@ def interactive_plot_type_selection_QT():
     fig_title_layout.addStretch()
 
     settings_layout.addLayout(fig_title_layout)
+
+
+    ########### Add the 2st horizontal line separator ###########
+    settings_layout.addWidget(create_horizontal_line())
+    
+    # Add input fields for "Figure Width" and "Figure Height"
+    fig_size_layout = QHBoxLayout()
+    fig_width_label = QLabel("Figure Width:")
+    fig_width_input = QLineEdit("4")  # Default width
+    fig_height_label = QLabel("Figure Height:")
+    fig_height_input = QLineEdit("4")  # Default height
+
+    fig_width_input.setFixedWidth(60)
+    fig_height_input.setFixedWidth(60)
+
+    fig_size_layout.addWidget(fig_width_label)
+    fig_size_layout.addWidget(fig_width_input)
+    fig_size_layout.addSpacing(10)
+    fig_size_layout.addWidget(fig_height_label)
+    fig_size_layout.addWidget(fig_height_input)
+    fig_size_layout.addStretch()
+
+    settings_layout.addLayout(fig_size_layout)
 
     ########### Add the 2st horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
