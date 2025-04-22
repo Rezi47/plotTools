@@ -25,6 +25,16 @@ class PlotCanvas(FigureCanvas):
         self.setParent(parent)
         self.axs = []  # Store axes for dynamic plotting
 
+        # Variables for dragging the title
+        self.title = None
+        self.dragging = False
+        self.last_mouse_y = None
+
+        # Connect mouse events
+        self.mpl_connect("button_press_event", self.on_press)
+        self.mpl_connect("motion_notify_event", self.on_motion)
+        self.mpl_connect("button_release_event", self.on_release)
+
     def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim, fig_width=4, fig_height=4):
         self.fig.clear()  # Clear the figure for new plots
         colors = ['b', 'r', 'g', 'c', 'm', 'y']
@@ -65,12 +75,39 @@ class PlotCanvas(FigureCanvas):
         for j in range(max_num_variables, len(self.axs)):
             self.fig.delaxes(self.axs[j])
 
-        self.fig.suptitle(fig_title, fontsize=14)  
+        # Add the figure title
+        self.title = self.fig.suptitle(fig_title, fontsize=14)
 
         # Reduce margins around the figure
         self.fig.tight_layout()
 
         self.draw()  # Render the updated plot
+
+    def on_press(self, event):
+        """Handle mouse press events."""
+        if event.inaxes is None and self.title is not None:
+            bbox = self.title.get_window_extent(renderer=self.get_renderer())
+            if bbox.contains(event.x, event.y):
+                self.dragging = True
+                self.last_mouse_y = event.y
+
+    def on_motion(self, event):
+        """Handle mouse motion events."""
+        if self.dragging and self.title is not None:
+            dy = event.y - self.last_mouse_y
+            self.last_mouse_y = event.y
+
+            # Update the title's position
+            current_y = self.title.get_position()[1]
+            new_y = current_y + (dy / self.fig.bbox.height)
+            self.title.set_position((0.5, new_y))
+
+            self.draw()  # Redraw the figure
+
+    def on_release(self, event):
+        """Handle mouse release events."""
+        self.dragging = False
+        self.last_mouse_y = None
 
 def extract_general_values(file_path, skip_row, usecols):
     """
