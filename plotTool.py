@@ -25,10 +25,11 @@ class PlotCanvas(FigureCanvas):
         self.setParent(parent)
         self.axs = []  # Store axes for dynamic plotting
 
-        # Variables for dragging the title
+        # Variables for dragging the title and legends
         self.title = None
-        self.dragging = False
-        self.last_mouse_y = None
+        self.dragging_title = False
+        self.dragging_legend = None  # Track which legend is being dragged
+        self.last_mouse_pos = None
 
         # Connect mouse events
         self.mpl_connect("button_press_event", self.on_press)
@@ -69,7 +70,8 @@ class PlotCanvas(FigureCanvas):
                 left=x_min if x_min is not None else self.axs[i].get_xlim()[0],
                 right=x_max if x_max is not None else self.axs[i].get_xlim()[1]
             )
-            self.axs[i].legend()
+            legend = self.axs[i].legend()
+            legend.set_draggable(True)  # Enable draggable legends
 
         # Hide unused subplots
         for j in range(max_num_variables, len(self.axs)):
@@ -85,29 +87,56 @@ class PlotCanvas(FigureCanvas):
 
     def on_press(self, event):
         """Handle mouse press events."""
-        if event.inaxes is None and self.title is not None:
-            bbox = self.title.get_window_extent(renderer=self.get_renderer())
-            if bbox.contains(event.x, event.y):
-                self.dragging = True
-                self.last_mouse_y = event.y
+        if event.inaxes is None:
+            # Check if the title is clicked
+            if self.title is not None:
+                bbox = self.title.get_window_extent(renderer=self.get_renderer())
+                if bbox.contains(event.x, event.y):
+                    self.dragging_title = True
+                    self.last_mouse_pos = (event.x, event.y)
+                    return
+
+            # Check if any legend is clicked
+            for ax in self.axs:
+                legend = ax.get_legend()
+                if legend is not None:
+                    bbox = legend.get_window_extent(renderer=self.get_renderer())
+                    if bbox.contains(event.x, event.y):
+                        self.dragging_legend = legend
+                        self.last_mouse_pos = (event.x, event.y)
+                        return
 
     def on_motion(self, event):
         """Handle mouse motion events."""
-        if self.dragging and self.title is not None:
-            dy = event.y - self.last_mouse_y
-            self.last_mouse_y = event.y
+        if self.last_mouse_pos is None:
+            return
 
+        dx = event.x - self.last_mouse_pos[0]
+        dy = event.y - self.last_mouse_pos[1]
+        self.last_mouse_pos = (event.x, event.y)
+
+        if self.dragging_title and self.title is not None:
             # Update the title's position
-            current_y = self.title.get_position()[1]
+            current_x, current_y = self.title.get_position()
+            new_x = current_x + (dx / self.fig.bbox.width)
             new_y = current_y + (dy / self.fig.bbox.height)
-            self.title.set_position((0.5, new_y))
+            self.title.set_position((new_x, new_y))
+            self.draw()  # Redraw the figure
 
+        elif self.dragging_legend is not None:
+            # Update the legend's position
+            legend = self.dragging_legend
+            current_x, current_y = legend.get_bbox_to_anchor()._bbox.x0, legend.get_bbox_to_anchor()._bbox.y0
+            new_x = current_x + (dx / self.fig.bbox.width)
+            new_y = current_y + (dy / self.fig.bbox.height)
+            legend.set_bbox_to_anchor((new_x, new_y))
             self.draw()  # Redraw the figure
 
     def on_release(self, event):
         """Handle mouse release events."""
-        self.dragging = False
-        self.last_mouse_y = None
+        self.dragging_title = False
+        self.dragging_legend = None
+        self.last_mouse_pos = None
 
 def extract_general_values(file_path, skip_row, usecols):
     """
