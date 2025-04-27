@@ -436,10 +436,10 @@ def interactive_plot_type_selection_QT():
         # Calculate the new window size
         new_width = (fig_width * cols * 100) + 450
         new_height = fig_height * rows * 100
-
+        
+        window.adjustSize()
         # Resize the window (convert to integers)
         window.resize(int(new_width), int(new_height))
-        window.adjustSize()
 
     def write_plot_button_clicked():
         # Save the plot using the canvas's figure
