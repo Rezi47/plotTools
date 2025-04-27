@@ -68,8 +68,11 @@ class PlotCanvas(FigureCanvas):
                 linestyle = next(linestyle_cycle)
                 self.axs[i].plot(times, variables[i], label=label, linestyle=linestyle, linewidth=1, color=color)
 
+            title = axis_title[i] if i < len(axis_title) else axis_title[0]
+            dim = axis_dim[i] if i < len(axis_dim) else axis_dim[0]
+
             self.axs[i].set_xlabel(r"t ($s$)")
-            self.axs[i].set_ylabel(fr"{axis_title} (${axis_dim}$)")
+            self.axs[i].set_ylabel(fr"{title} (${dim}$)")
             self.axs[i].set_xlim(
                 left=x_min if x_min is not None else self.axs[i].get_xlim()[0],
                 right=x_max if x_max is not None else self.axs[i].get_xlim()[1]
@@ -85,7 +88,7 @@ class PlotCanvas(FigureCanvas):
             for (times, variables), label in zip(parsed_data, labels):
                 ax_individual.plot(times, variables[i], label=label, linestyle=next(linestyle_cycle), linewidth=1, color=next(color_cycle))
             ax_individual.set_xlabel(r"t ($s$)")
-            ax_individual.set_ylabel(fr"{axis_title} (${axis_dim}$)")
+            ax_individual.set_ylabel(fr"{title} (${dim}$)")
             ax_individual.set_xlim(
                 left=x_min if x_min is not None else ax_individual.get_xlim()[0],
                 right=x_max if x_max is not None else ax_individual.get_xlim()[1]
@@ -212,7 +215,7 @@ fig_config = {
     },
     'motion': {
         'label': 'Motion',
-        'axisTitle': 'Amplitude',
+        'axisTitle': 'Heave',
         'dimension': 'm',
         'function': extract_motion_values
     },
@@ -338,8 +341,8 @@ def interactive_plot_type_selection_QT():
     x_min = None
     x_max = None
     fig_title = None
-    axis_title = None
-    axis_dim = None
+    axis_title = []
+    axis_dim = []
     files = []
     labels = []
     scale = []
@@ -350,9 +353,12 @@ def interactive_plot_type_selection_QT():
 
     def update_values():
         nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
-        axis_title = axis_title_input.text() if axis_title_input.text() else None
+        axis_title, axis_dim = zip(*[
+            (title_input.text().strip() or "", dim_input.text().strip() or "")
+            for title_input, dim_input in zip(axis_title_inputs, axis_dim_inputs)
+            if title_input.text().strip() or dim_input.text().strip()
+        ]) if axis_title_inputs and axis_dim_inputs else ([], [])
         fig_title = fig_title_input.text() if fig_title_input.text() else None
-        axis_dim = axis_dim_input.text() if axis_dim_input.text() else None
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
 
@@ -361,8 +367,8 @@ def interactive_plot_type_selection_QT():
     def set_plot_type(plot_value):
         nonlocal plot_type
         plot_type = plot_value
-        axis_title_input.setText(fig_config[plot_type]['axisTitle'])
-        axis_dim_input.setText(fig_config[plot_type]['dimension'])
+        axis_title_inputs[0].setText(fig_config[plot_type]['axisTitle'])
+        axis_dim_inputs[0].setText(fig_config[plot_type]['dimension'])
         update_values()  # Capture the latest values when plot type is selected
 
         # Change the style of the selected button to indicate it's selected
@@ -518,8 +524,12 @@ def interactive_plot_type_selection_QT():
     axis_title_inputs = []
     axis_dim_inputs = []
 
-    # Add dynamic axis title and dimension rows
-    axis_rows = []  # Keep track of all axis rows for consistent layout
+    # Keep track of all axis rows
+    axis_rows = []
+
+    # Create a dedicated container layout for axis rows
+    axis_container_layout = QVBoxLayout()
+    settings_layout.addLayout(axis_container_layout)  # Add the container to the main settings layout
 
     def add_axis_row():
         axis_row_layout = QHBoxLayout()
@@ -540,12 +550,8 @@ def interactive_plot_type_selection_QT():
         axis_row_layout.addWidget(axis_dim_input)
         axis_row_layout.addStretch()
 
-        # Insert the new row directly under the first row
-        if axis_rows:
-            index = settings_layout.indexOf(axis_rows[0]) + 1
-            settings_layout.insertLayout(index, axis_row_layout)
-        else:
-            settings_layout.addLayout(axis_row_layout)
+        # Add the new row to the container layout
+        axis_container_layout.addLayout(axis_row_layout)
 
         # Keep track of the row
         axis_rows.append(axis_row_layout)
@@ -567,7 +573,6 @@ def interactive_plot_type_selection_QT():
 
     # Add the initial axis row
     add_axis_row()
-
     ########### Add the 5th horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
 
