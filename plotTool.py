@@ -353,11 +353,30 @@ def interactive_plot_type_selection_QT():
 
     def update_values():
         nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
-        axis_title, axis_dim = zip(*[
-            (title_input.text().strip() or "", dim_input.text().strip() or "")
-            for title_input, dim_input in zip(axis_title_inputs, axis_dim_inputs)
-            if title_input.text().strip() or dim_input.text().strip()
-        ]) if axis_title_inputs and axis_dim_inputs else ([], [])
+
+        axis_title = []
+        axis_dim = []
+
+        # Validate axis_title_inputs and axis_dim_inputs
+        for row_index, (title_input, dim_input) in enumerate(zip(axis_title_inputs, axis_dim_inputs)):
+            title = title_input.text().strip()
+            dim = dim_input.text().strip()
+
+            # Check if one is empty while the other is filled
+            if (title and not dim) or (dim and not title):
+                QMessageBox.critical(
+                    window,
+                    "Input Error",
+                    f"Row {row_index + 1}: Both 'Axis Title' and 'Dimension' must be filled if one is provided."
+                )
+                return  # Stop execution until the user fixes the input
+
+            # Add valid inputs to the lists
+            if title or dim:  # Only add rows where at least one field is non-empty
+                axis_title.append(title)
+                axis_dim.append(dim)
+
+        # Handle other values
         fig_title = fig_title_input.text() if fig_title_input.text() else None
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
