@@ -63,11 +63,15 @@ class PlotCanvas(FigureCanvas):
             # Create color and linestyle cycles once
             color_cycle = itertools.cycle(colors)
             linestyle_cycle = itertools.cycle(linestyles)
+            fig_individual = Figure(figsize=(fig_width, fig_height), dpi=100)
+            ax_individual = fig_individual.add_subplot(111)
+
             for (times, variables), label in zip(parsed_data, labels):
                 color = next(color_cycle)
                 linestyle = next(linestyle_cycle)
                 self.axs[i].plot(times, variables[i], label=label, linestyle=linestyle, linewidth=1, color=color)
-
+                ax_individual.plot(times, variables[i], label=label, linestyle=linestyle, linewidth=1, color=color)
+                
             title = axis_title[i] if i < len(axis_title) else axis_title[0]
             dim = axis_dim[i] if i < len(axis_dim) else axis_dim[0]
 
@@ -80,24 +84,16 @@ class PlotCanvas(FigureCanvas):
             legend = self.axs[i].legend()
             legend.set_draggable(True)  # Enable draggable legends
 
-            # Create a new individual figure for each variable
-            fig_individual = Figure(figsize=(fig_width, fig_height), dpi=100)
-            ax_individual = fig_individual.add_subplot(111)
-            color_cycle = itertools.cycle(colors)
-            linestyle_cycle = itertools.cycle(linestyles)
-            for (times, variables), label in zip(parsed_data, labels):
-                ax_individual.plot(times, variables[i], label=label, linestyle=next(linestyle_cycle), linewidth=1, color=next(color_cycle))
-            ax_individual.set_xlabel(r"t ($s$)")
-            ax_individual.set_ylabel(fr"{title} (${dim}$)")
-            ax_individual.set_xlim(
-                left=x_min if x_min is not None else ax_individual.get_xlim()[0],
-                right=x_max if x_max is not None else ax_individual.get_xlim()[1]
-            )
-            ax_individual.legend()
+            ax_individual.set_xlabel(self.axs[i].get_xlabel())
+            ax_individual.set_ylabel(self.axs[i].get_ylabel())
+            ax_individual.set_xlim(self.axs[i].get_xlim())
+            legend = self.axs[i].get_legend()
+            if legend is not None:
+                handles, labels = legend.legendHandles, [text.get_text() for text in legend.get_texts()]
+                ax_individual.legend(handles, labels)
             fig_individual.tight_layout()
-
             # Store the individual figure in the dictionary
-            self.individual_figures[f"Variable_{i+1}"] = fig_individual
+            self.individual_figures[f"Variable_{i+1}_{title}"] = fig_individual
 
         # Hide unused subplots
         for j in range(max_num_variables, len(self.axs)):
@@ -272,24 +268,31 @@ def normalize_to_origin(parsed_data):
 
 
 def save_plot_func(fig, individual_figures, axis_title, fig_title):
-    """Saves the plot to a file"""
+    """Saves the plot and logs the saved paths."""
     output_dir = "."
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    sp_file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}{axis_title}.png")
-    
-    # Save the figure and print the message
-    fig.savefig(sp_file_path)
-    print(f"Figure saved to {sp_file_path}")
+    # Log file to store saved paths
+    saved_paths = []
 
-    # Access the stored figures
+    # Save the main figure
+    sp_file = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}figure.png")
+    fig.savefig(sp_file)
+    saved_paths.append(sp_file)
+    print(f"Figure saved to {sp_file}")
+
+    # Save individual figures
+    ind_output_dir = "./individual_figures"
+    if not os.path.exists(ind_output_dir):
+        os.makedirs(ind_output_dir)
     for variable_name, fig in individual_figures.items():
-        file_path = os.path.join("./individual_figures", f"{variable_name}.png")
-        fig.savefig(file_path)  # Save the figure to a file
-        print(f"Saved {variable_name} to {file_path}")
-    
-    return sp_file_path
+        ind_sp_file = os.path.join(ind_output_dir, f"{fig_title + '_' if fig_title else ''}{variable_name}.png")
+        fig.savefig(ind_sp_file)
+        saved_paths.append(ind_sp_file)
+        print(f"Saved {variable_name} to {ind_sp_file}")
+
+    return saved_paths
 
 def save_data_func(parsed_data, labels, fig_title):
     base_dir = os.path.dirname(files[0]) if files else ""
@@ -444,8 +447,11 @@ def interactive_plot_type_selection_QT():
     def write_plot_button_clicked():
         # Save the plot using the canvas's figure
         update_values()
-        sp_file_path = save_plot_func(canvas.fig, canvas.individual_figures, axis_title, fig_title)
-        QMessageBox.information(window, "Success", f"Figure saved to: {sp_file_path}")
+        saved_paths = save_plot_func(canvas.fig, canvas.individual_figures, axis_title, fig_title)
+
+        # Format the saved paths as a list for the QMessageBox
+        saved_paths_list = "\n".join(saved_paths)
+        QMessageBox.information(window, "Success", f"Figures saved to:\n\n{saved_paths_list}")
 
     def write_data_button_clicked():
         if not files:
