@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtWidgets import (
     QApplication, QFileDialog, QWidget, QVBoxLayout, QPushButton, 
     QDialog, QLabel, QLineEdit, QCheckBox, QHBoxLayout, 
-    QFrame, QMessageBox, QSplitter
+    QFrame, QMessageBox, QSplitter, QMainWindow
 )
 from functools import partial
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -57,8 +57,6 @@ class PlotCanvas(FigureCanvas):
         # Create subplots dynamically
         self.axs = self.fig.subplots(rows, cols, squeeze=False).flatten()
 
-
-
         for i in range(max_num_variables):
             # Create color and linestyle cycles once
             color_cycle = itertools.cycle(colors)
@@ -75,7 +73,7 @@ class PlotCanvas(FigureCanvas):
             title = axis_title[i] if i < len(axis_title) else axis_title[0]
             dim = axis_dim[i] if i < len(axis_dim) else axis_dim[0]
 
-            self.axs[i].set_xlabel(r"t ($s$)" if not x_axis_title else fr"{x_axis_title} (${x_axis_dim}$)")
+            self.axs[i].set_xlabel(fr"{x_axis_title} (${x_axis_dim}$)")
             self.axs[i].set_ylabel(fr"{title} (${dim}$)")
             self.axs[i].set_xlim(
                 left=x_min if x_min is not None else self.axs[i].get_xlim()[0],
@@ -205,14 +203,14 @@ def extract_motion_values(file_path, skip_row, usecols):
 fig_config = {
     'general': {
         'label': 'General',
-        'axisTitle': 'Amplitude',
-        'dimension': '-',
+        'def_axis_title': 'Amplitude',
+        'def_dimension': '-',
         'function': extract_general_values
     },
     'motion': {
         'label': 'Motion',
-        'axisTitle': 'Heave',
-        'dimension': 'm',
+        'def_axis_title': 'Heave',
+        'def_dimension': 'm',
         'function': extract_motion_values
     },
 }
@@ -401,8 +399,8 @@ def interactive_plot_type_selection_QT():
     def set_plot_type(plot_value):
         nonlocal plot_type
         plot_type = plot_value
-        axis_title_inputs[0].setText(fig_config[plot_type]['axisTitle'])
-        axis_dim_inputs[0].setText(fig_config[plot_type]['dimension'])
+        axis_title_inputs[0].setText(fig_config[plot_type]['def_axis_title'])
+        axis_dim_inputs[0].setText(fig_config[plot_type]['def_dimension'])
         x_axis_title_input.setText("t")
         x_axis_dim_input.setText("s")
 
@@ -931,8 +929,10 @@ def parse_arguments():
                         help="List of input files followed by their options: -label, -scale, -shift, -norm_origin, -skip_row, -usecols")
     parser.add_argument('-plot_type', '-pt', default="general", help=f"Specify the Type of plot: {', '.join(fig_config.keys())}")
     parser.add_argument('-fig_title', '-ft', default=None, help="Specify a Title for the figure")
-    parser.add_argument('-axis_title', '-at', default="Amplitude", help="Specify a Title for y Axis")
-    parser.add_argument('-axis_dim', '-ad', default="-", help="Specify a Dimension for y Axis")
+    parser.add_argument('-x_axis_title', '-xat', default="t", help="Specify a Title for the x Axis")
+    parser.add_argument('-x_axis_dim', '-xad', default="s", help="Specify a Dimension for the x Axis")
+    parser.add_argument('-y_axis_title', '-yat', nargs='+', default=["Amplitude"], help="Specify Titles for the y Axes (space-separated for multiple)")
+    parser.add_argument('-y_axis_dim', '-yad', nargs='+', default=["-"], help="Specify Dimensions for the y Axes (space-separated for multiple)")
     parser.add_argument('-x_min', '-xmi', type=float, help="Minimum x-axis value")
     parser.add_argument('-x_max', '-xma', type=float, help="Maximum x-axis value")
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Enable saving the plot as a PNG image")
@@ -973,8 +973,9 @@ def parse_arguments():
         })
 
     return (
-        args.plot_type, args.fig_title, args.axis_title, args.axis_dim,
-        args.x_min, args.x_max, args.save_plot, args.save_data, files
+        args.plot_type, args.fig_title, args.x_axis_title, args.x_axis_dim,
+        args.y_axis_title, args.y_axis_dim, args.x_min, args.x_max,
+        args.save_plot, args.save_data, files
     )
 
 
@@ -984,15 +985,13 @@ if __name__ == "__main__":
 
     (
         plot_type, fig_title,
-        axis_title, axis_dim, x_min, x_max,
-        save_plot, save_data,
-        files
+        x_axis_title, x_axis_dim,
+        y_axis_title, y_axis_dim,
+        x_min, x_max, save_plot, save_data, files
     ) = parse_arguments()
 
     if not plot_type or not files:
-
         interactive_plot_type_selection_QT()
-
     else:
         for file in files:
             print("File:", os.path.relpath(file["path"]))
@@ -1000,16 +999,18 @@ if __name__ == "__main__":
             print(f"Scale value: {file['scale']}") if file["scale"] != 1 else None
             print(f"Shift value: {file['shift']}") if file["shift"] != 0 else None
             print(f"Normalized to the origin") if file["norm_origin"] else None
-            print(f"Skiped rows: {file['skip_row']}") if file["skip_row"] else None
+            print(f"Skipped rows: {file['skip_row']}") if file["skip_row"] else None
             print(f"Used columns: {file['usecols']}") if file["usecols"] else None
             print()
         
         print(f"Plot type: {plot_type}")
         print(f"Figure title: {fig_title}") if fig_title else None
-        print(f"Axis title: {axis_title}")
-        print(f"Axis dimension: {axis_dim}")
+        print(f"X Axis title: {x_axis_title}")
+        print(f"X Axis dimension: {x_axis_dim}")
+        print(f"Y Axis titles: {y_axis_title}")
+        print(f"Y Axis dimensions: {y_axis_dim}")
         if x_min or x_max:
-            print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is not None else x_max}")
+            print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
         print()
 
         parsed_data = extract_data(files)
@@ -1024,7 +1025,14 @@ if __name__ == "__main__":
         layout.addWidget(canvas)
 
         # Plot the data
-        canvas.plot(parsed_data, [file["label"] for file in files], x_min, x_max, fig_title, axis_title, axis_dim)
+        canvas.plot(
+            parsed_data,
+            [file["label"] for file in files],
+            x_min, x_max, fig_title,
+            y_axis_title, y_axis_dim,
+            x_axis_title=x_axis_title,
+            x_axis_dim=x_axis_dim
+        )
 
         # Show the window
         window.setWindowTitle("Plot Viewer")
@@ -1034,7 +1042,7 @@ if __name__ == "__main__":
 
         # Save the plot and data if required
         if save_plot:
-            save_plot_func(canvas.fig, axis_title, fig_title)
+            save_plot_func(canvas.fig, canvas.individual_figures, y_axis_title, fig_title)
         if save_data:
             save_data_func(parsed_data, [file["label"] for file in files], fig_title)
 
