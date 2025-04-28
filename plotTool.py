@@ -37,7 +37,7 @@ class PlotCanvas(FigureCanvas):
         self.mpl_connect("motion_notify_event", self.on_motion)
         self.mpl_connect("button_release_event", self.on_release)
 
-    def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim, fig_width=4, fig_height=4):
+    def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim, fig_width=4, fig_height=4, x_axis_title=None, x_axis_dim=None):
         self.fig.clear()  # Clear the main figure for new plots
         colors = ['b', 'r', 'g', 'c', 'm', 'y']
         linestyles = ['-', '--', ':', '-.']
@@ -75,7 +75,7 @@ class PlotCanvas(FigureCanvas):
             title = axis_title[i] if i < len(axis_title) else axis_title[0]
             dim = axis_dim[i] if i < len(axis_dim) else axis_dim[0]
 
-            self.axs[i].set_xlabel(r"t ($s$)")
+            self.axs[i].set_xlabel(r"t ($s$)" if not x_axis_title else fr"{x_axis_title} (${x_axis_dim}$)")
             self.axs[i].set_ylabel(fr"{title} (${dim}$)")
             self.axs[i].set_xlim(
                 left=x_min if x_min is not None else self.axs[i].get_xlim()[0],
@@ -344,6 +344,8 @@ def interactive_plot_type_selection_QT():
     x_min = None
     x_max = None
     fig_title = None
+    x_axis_title = None
+    x_axis_dim = None
     axis_title = []
     axis_dim = []
     files = []
@@ -353,9 +355,11 @@ def interactive_plot_type_selection_QT():
     skip_row = []
     usecols = []
     norm_origin = False
-
+    fig_width = None
+    fig_height = None
+    
     def update_values():
-        nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, axis_title, axis_dim, skip_row, usecols
+        nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, x_axis_title, x_axis_dim, axis_title, axis_dim, skip_row, usecols, fig_width, fig_height
 
         axis_title = []
         axis_dim = []
@@ -384,6 +388,14 @@ def interactive_plot_type_selection_QT():
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
 
+                # Get user-defined figure dimensions
+        fig_width = float(fig_width_input.text()) if fig_width_input.text() else 4
+        fig_height = float(fig_height_input.text()) if fig_height_input.text() else 4
+
+        # Get x-axis title and dimension
+        x_axis_title = x_axis_title_input.text().strip()
+        x_axis_dim = x_axis_dim_input.text().strip()
+
 
 
     def set_plot_type(plot_value):
@@ -391,6 +403,9 @@ def interactive_plot_type_selection_QT():
         plot_type = plot_value
         axis_title_inputs[0].setText(fig_config[plot_type]['axisTitle'])
         axis_dim_inputs[0].setText(fig_config[plot_type]['dimension'])
+        x_axis_title_input.setText("t")
+        x_axis_dim_input.setText("s")
+
         update_values()  # Capture the latest values when plot type is selected
 
         # Change the style of the selected button to indicate it's selected
@@ -407,11 +422,19 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files)
 
-        # Get user-defined figure dimensions
-        fig_width = float(fig_width_input.text()) if fig_width_input.text() else 4
-        fig_height = float(fig_height_input.text()) if fig_height_input.text() else 4
-
-        canvas.plot(parsed_data, [file["label"] for file in files], x_min, x_max, fig_title, axis_title, axis_dim, fig_width, fig_height)
+        canvas.plot(
+            parsed_data,
+            [file["label"] for file in files],
+            x_min,
+            x_max,
+            fig_title,
+            axis_title,
+            axis_dim,
+            fig_width,
+            fig_height,
+            x_axis_title,
+            x_axis_dim
+        )
 
         # Enable the "Save Plot" button after plotting
         write_plot_button.setEnabled(True)
@@ -545,7 +568,31 @@ def interactive_plot_type_selection_QT():
     ########### Add the 2st horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
 
-    # Lists to store axis title and dimension inputs
+    # Add input fields for "X-Axis Title" and "X-Axis Dimension"
+    x_axis_layout = QHBoxLayout()
+    x_axis_title_label = QLabel("X-Axis Title:")
+    x_axis_title_input = QLineEdit()
+    x_axis_dim_label = QLabel("X-Axis Dimension:")
+    x_axis_dim_input = QLineEdit()
+
+    # Set fixed width for input fields
+    x_axis_title_input.setFixedWidth(140)
+    x_axis_dim_input.setFixedWidth(70)
+
+    # Add widgets to the horizontal layout
+    x_axis_layout.addWidget(x_axis_title_label)
+    x_axis_layout.addWidget(x_axis_title_input)
+    x_axis_layout.addSpacing(10)
+    x_axis_layout.addWidget(x_axis_dim_label)
+    x_axis_layout.addWidget(x_axis_dim_input)
+    x_axis_layout.addStretch()
+
+    # Add the layout to the settings panel
+    settings_layout.addLayout(x_axis_layout)
+
+    ########### Add another horizontal line separator ###########
+    settings_layout.addWidget(create_horizontal_line())
+
     axis_title_inputs = []
     axis_dim_inputs = []
 
@@ -558,9 +605,9 @@ def interactive_plot_type_selection_QT():
 
     def add_axis_row():
         axis_row_layout = QHBoxLayout()
-        axis_title_label = QLabel("Axis title:")
+        axis_title_label = QLabel("Y-Axis Title:")
         axis_title_input = QLineEdit()
-        axis_dim_label = QLabel("Dimension:")
+        axis_dim_label = QLabel("Y-Axis Dimension:")
         axis_dim_input = QLineEdit()
 
         # Set fixed width for input fields
