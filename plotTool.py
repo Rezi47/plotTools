@@ -500,7 +500,32 @@ def interactive_plot_type_selection_QT():
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
         return line
-    
+ 
+    def create_section_title_with_line(title):
+        """Creates a horizontal line with a title in the middle."""
+        layout = QHBoxLayout()
+
+        # Left line
+        left_line = QFrame()
+        left_line.setFrameShape(QFrame.HLine)
+        left_line.setFrameShadow(QFrame.Sunken)
+
+        # Title
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-size: 10px; font-weight: bold; padding: 0 10px;")
+
+        # Right line
+        right_line = QFrame()
+        right_line.setFrameShape(QFrame.HLine)
+        right_line.setFrameShadow(QFrame.Sunken)
+
+        # Add widgets to the layout
+        layout.addWidget(left_line)
+        layout.addWidget(title_label)
+        layout.addWidget(right_line)
+
+        return layout
+     
     # Main window with QSplitter
     window = QWidget()
     window.setWindowTitle("Plot Setting")
@@ -606,14 +631,9 @@ def interactive_plot_type_selection_QT():
 
     settings_layout.addLayout(fig_size_layout)
 
-    ########### Add the 2st horizontal line separator ###########
-    settings_layout.addWidget(create_horizontal_line())
-
     ########### Add the X-Axis Section ###########
-    x_axis_section_label = QLabel("X-Axis")
-    x_axis_section_label.setAlignment(Qt.AlignCenter)
-    x_axis_section_label.setStyleSheet("font-size: 10px; font-weight: bold; margin-top: 10px;")
-    settings_layout.addWidget(x_axis_section_label)
+    x_axis_section_layout = create_section_title_with_line("X-Axis")
+    settings_layout.addLayout(x_axis_section_layout)
 
     # Add input fields for "X-Axis Title" and "X-Axis Dimension"
     x_axis_layout = QHBoxLayout()
@@ -638,10 +658,8 @@ def interactive_plot_type_selection_QT():
     settings_layout.addLayout(x_axis_layout)
 
     ########### Add the Y-Axis Section ###########
-    y_axis_section_label = QLabel("Y-Axis")
-    y_axis_section_label.setAlignment(Qt.AlignCenter)
-    y_axis_section_label.setStyleSheet("font-size: 10px; font-weight: bold; margin-top: 10px;")
-    settings_layout.addWidget(y_axis_section_label)
+    y_axis_section_layout = create_section_title_with_line("Y-Axis")
+    settings_layout.addLayout(y_axis_section_layout)
 
     # Keep track of all axis rows
     axis_title_inputs = []
