@@ -215,7 +215,7 @@ fig_config = {
     },
 }
 
-def extract_data(files):
+def extract_data(files, plot_type):
     parsed_data = []
 
     for file_info in files:
@@ -418,7 +418,7 @@ def interactive_plot_type_selection_QT():
             return
 
         update_values()
-        parsed_data = extract_data(files)
+        parsed_data = extract_data(files, plot_type)
 
         canvas.plot(
             parsed_data,
@@ -480,7 +480,7 @@ def interactive_plot_type_selection_QT():
             return
         
         update_values()
-        parsed_data = extract_data(files)
+        parsed_data = extract_data(files, plot_type)
         # if norm_origin: normalize_to_origin(parsed_data)
         output_dir = save_data_func(parsed_data, labels, fig_title)
         QMessageBox.information(window, "Success", f"Extracted data saved to: {output_dir}")
@@ -1013,7 +1013,7 @@ if __name__ == "__main__":
             print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
         print()
 
-        parsed_data = extract_data(files)
+        parsed_data = extract_data(files, plot_type)
 
         window = QMainWindow()
         central_widget = QWidget()
