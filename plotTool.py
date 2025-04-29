@@ -609,11 +609,17 @@ def interactive_plot_type_selection_QT():
     ########### Add the 2st horizontal line separator ###########
     settings_layout.addWidget(create_horizontal_line())
 
+    ########### Add the X-Axis Section ###########
+    x_axis_section_label = QLabel("X-Axis")
+    x_axis_section_label.setAlignment(Qt.AlignCenter)
+    x_axis_section_label.setStyleSheet("font-size: 10px; font-weight: bold; margin-top: 10px;")
+    settings_layout.addWidget(x_axis_section_label)
+
     # Add input fields for "X-Axis Title" and "X-Axis Dimension"
     x_axis_layout = QHBoxLayout()
-    x_axis_title_label = QLabel("X-Axis Title:")
+    x_axis_title_label = QLabel("Title:")
     x_axis_title_input = QLineEdit()
-    x_axis_dim_label = QLabel("X-Axis Dimension:")
+    x_axis_dim_label = QLabel("Dimension:")
     x_axis_dim_input = QLineEdit()
 
     # Set fixed width for input fields
@@ -631,14 +637,15 @@ def interactive_plot_type_selection_QT():
     # Add the layout to the settings panel
     settings_layout.addLayout(x_axis_layout)
 
-    ########### Add another horizontal line separator ###########
-    settings_layout.addWidget(create_horizontal_line())
-
-    axis_title_inputs = []
-    axis_dim_inputs = []
+    ########### Add the Y-Axis Section ###########
+    y_axis_section_label = QLabel("Y-Axis")
+    y_axis_section_label.setAlignment(Qt.AlignCenter)
+    y_axis_section_label.setStyleSheet("font-size: 10px; font-weight: bold; margin-top: 10px;")
+    settings_layout.addWidget(y_axis_section_label)
 
     # Keep track of all axis rows
-    axis_rows = []
+    axis_title_inputs = []
+    axis_dim_inputs = []
 
     # Create a dedicated container layout for axis rows
     axis_container_layout = QVBoxLayout()
@@ -646,9 +653,9 @@ def interactive_plot_type_selection_QT():
 
     def add_axis_row():
         axis_row_layout = QHBoxLayout()
-        axis_title_label = QLabel("Y-Axis Title:")
+        axis_title_label = QLabel("Title:")
         axis_title_input = QLineEdit()
-        axis_dim_label = QLabel("Y-Axis Dimension:")
+        axis_dim_label = QLabel("Dimension:")
         axis_dim_input = QLineEdit()
 
         # Set fixed width for input fields
@@ -667,9 +674,6 @@ def interactive_plot_type_selection_QT():
         axis_container_layout.addLayout(axis_row_layout)
 
         # Keep track of the row
-        axis_rows.append(axis_row_layout)
-
-        # Save the input widgets in the lists
         axis_title_inputs.append(axis_title_input)
         axis_dim_inputs.append(axis_dim_input)
 
