@@ -292,7 +292,7 @@ def save_plot_func(fig, individual_figures, axis_title, fig_title):
 
     return saved_paths
 
-def save_data_func(parsed_data, labels, fig_title):
+def save_data_func(parsed_data, labels, fig_title, x_axis_title, axis_title):
     base_dir = os.path.dirname(files[0]) if files else ""
     output_dir = os.path.join(base_dir, "extractedData")
     if not os.path.exists(output_dir):
@@ -301,18 +301,20 @@ def save_data_func(parsed_data, labels, fig_title):
     # First determine the maximum number of variables across all datasets
     max_vars = max(len(variables) for _, variables in parsed_data)
     
+   
     # Create one file per variable index
     for var_idx in range(max_vars):
         # Create filename for this variable index
         file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}Variable_{var_idx+1}.csv")
-        
+        title = axis_title[var_idx] if var_idx < len(axis_title) else axis_title[0]
+
         with open(file_path, 'w') as f:
             # Write header - Time columns for each dataset that has this variable
             headers = []
             for label, (times, variables) in zip(labels, parsed_data):
                 if var_idx < len(variables):
-                    headers.append(f"Time_{label}")
-                    headers.append(f"Data_{label}")
+                    headers.append(f"{x_axis_title}")
+                    headers.append(f"{title}_{label}")
             f.write(",".join(headers) + "\n")
             
             # Find maximum time length across datasets that have this variable
@@ -347,7 +349,6 @@ def interactive_plot_type_selection_QT():
     axis_title = []
     axis_dim = []
     files = []
-    labels = []
     scale = []
     shift = []
     skip_row = []
@@ -482,7 +483,7 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files, plot_type)
         # if norm_origin: normalize_to_origin(parsed_data)
-        output_dir = save_data_func(parsed_data, labels, fig_title)
+        output_dir = save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, axis_title)
         QMessageBox.information(window, "Success", f"Extracted data saved to: {output_dir}")
 
     def update_file_paths(updated_files):
@@ -1047,6 +1048,6 @@ if __name__ == "__main__":
         if save_plot:
             save_plot_func(canvas.fig, canvas.individual_figures, y_axis_title, fig_title)
         if save_data:
-            save_data_func(parsed_data, [file["label"] for file in files], fig_title)
+            save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, y_axis_title)
 
 
