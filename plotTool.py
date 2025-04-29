@@ -931,14 +931,17 @@ def parse_arguments():
     parser.add_argument('-fig_title', '-ft', default=None, help="Specify a Title for the figure")
     parser.add_argument('-x_axis_title', '-xat', default="t", help="Specify a Title for the x Axis")
     parser.add_argument('-x_axis_dim', '-xad', default="s", help="Specify a Dimension for the x Axis")
-    parser.add_argument('-y_axis_title', '-yat', nargs='+', default=["Amplitude"], help="Specify Titles for the y Axes (space-separated for multiple)")
-    parser.add_argument('-y_axis_dim', '-yad', nargs='+', default=["-"], help="Specify Dimensions for the y Axes (space-separated for multiple)")
+    parser.add_argument('-y_axis_title', '-yat', default="Amplitude", help="Specify Titles for the y Axes (comma-separated for multiple)")
+    parser.add_argument('-y_axis_dim', '-yad', default="-", help="Specify Dimensions for the y Axes (comma-separated for multiple)")
     parser.add_argument('-x_min', '-xmi', type=float, help="Minimum x-axis value")
     parser.add_argument('-x_max', '-xma', type=float, help="Maximum x-axis value")
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Enable saving the plot as a PNG image")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Enable saving the extracted data to CSV files")
     
     args = parser.parse_args()
+
+    y_axis_title_list = args.y_axis_title.split(',')
+    y_axis_dim_list = args.y_axis_dim.split(',')
 
     files = []
     i = 0
@@ -974,7 +977,7 @@ def parse_arguments():
 
     return (
         args.plot_type, args.fig_title, args.x_axis_title, args.x_axis_dim,
-        args.y_axis_title, args.y_axis_dim, args.x_min, args.x_max,
+        y_axis_title_list,y_axis_dim_list , args.x_min, args.x_max,
         args.save_plot, args.save_data, files
     )
 
