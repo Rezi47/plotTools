@@ -278,15 +278,16 @@ def save_plot_func(fig, individual_figures, axis_title, fig_title):
     saved_paths.append(sp_file)
     print(f"Figure saved to {sp_file}")
 
-    # Save individual figures
-    ind_output_dir = "./individual_figures"
-    if not os.path.exists(ind_output_dir):
-        os.makedirs(ind_output_dir)
-    for variable_name, fig in individual_figures.items():
-        ind_sp_file = os.path.join(ind_output_dir, f"{fig_title + '_' if fig_title else ''}{variable_name}.png")
-        fig.savefig(ind_sp_file)
-        saved_paths.append(ind_sp_file)
-        print(f"Saved {variable_name} to {ind_sp_file}")
+    if not len(individual_figures) == 1:
+        # Save individual figures
+        ind_output_dir = "./individual_figures"
+        if not os.path.exists(ind_output_dir):
+            os.makedirs(ind_output_dir)
+        for variable_name, fig in individual_figures.items():
+            ind_sp_file = os.path.join(ind_output_dir, f"{fig_title + '_' if fig_title else ''}{variable_name}.png")
+            fig.savefig(ind_sp_file)
+            saved_paths.append(ind_sp_file)
+            print(f"Saved {variable_name} to {ind_sp_file}")
 
     return saved_paths
 
@@ -511,7 +512,7 @@ def interactive_plot_type_selection_QT():
     settings_layout.setAlignment(Qt.AlignTop)  # Align all widgets to the top
 
     # Set a fixed width for the settings panel
-    # settings_panel.setFixedWidth(380)  # Adjust this value based on your widgets
+    # settings_panel.setFixedWidth(420)  # Adjust this value based on your widgets
     settings_panel.setLayout(settings_layout)
 
     # Add only the settings panel to the splitter initially
@@ -531,6 +532,43 @@ def interactive_plot_type_selection_QT():
 
     # Auto-click the "general" button
     QTimer.singleShot(100, plot_buttons["general"].click)
+
+    # # Create a QListWidget for the plot types
+    # plot_type_list = QListWidget()
+    # plot_type_list.setFixedHeight(100)  # Adjust the height as needed
+    # plot_type_list.setStyleSheet("""
+    #     QListWidget {
+    #         border: 1px solid #ccc;
+    #         padding: 5px;
+    #         font-size: 14px;
+    #     }
+    #     QListWidget::item {
+    #         padding: 5px;
+    #     }
+    #     QListWidget::item:selected {
+    #         background-color: #007BFF;
+    #         color: white;
+    #     }
+    # """)
+
+    # # Add plot types to the QListWidget
+    # for key, config in fig_config.items():
+    #     plot_type_list.addItem(config['label'])
+
+    # for index in range(plot_type_list.count()):
+    #     item = plot_type_list.item(index)
+    #     plot_value = list(fig_config.keys())[index]  # Map the index to the corresponding plot type key
+    #     item.setData(Qt.UserRole, plot_value)  # Store the plot_value in the item's data
+    #     item.setFlags(item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # Ensure the item is selectable
+    #     item.setSelected(False)  # Deselect by default
+
+    # plot_type_list.itemClicked.connect(lambda item: set_plot_type(item.data(Qt.UserRole)))
+
+    # settings_layout.addWidget(plot_type_list)
+
+    # # Auto-select the first item ("general") in the list
+    # QTimer.singleShot(100, lambda: plot_type_list.setCurrentRow(0))
+    # QTimer.singleShot(100, lambda: set_plot_type(plot_type_list.item(0).text()))
 
     # Add Figure Title
     fig_title_layout = QHBoxLayout()
