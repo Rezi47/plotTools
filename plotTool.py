@@ -822,20 +822,37 @@ class FileSelectorApp(QWidget):
         settings_button = QPushButton("⚙️ Settings")
         settings_button.setFixedSize(80, 30)
 
+        close_button = QPushButton("❌")  # Add a close button
+        close_button.setFixedSize(30, 30)
+        close_button.hide()  # Initially hide the close button
+
         # Connect the settings button to open the settings dialog
         settings_button.clicked.connect(lambda: self.open_settings_dialog(file_path_box))
         label_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input))
 
-        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input))
+        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input, close_button))
 
+        # Connect the close button to remove the row
+        def remove_row():
+            for i in reversed(range(file_row_layout.count())):
+                widget = file_row_layout.itemAt(i).widget()
+                if widget:
+                    widget.deleteLater()
+            self.layout.removeItem(file_row_layout)
+            self.update_values()  # Update the file list after removing a row
+
+        close_button.clicked.connect(remove_row)
+
+        # Add widgets to the horizontal layout
         file_row_layout.addWidget(browse_button)
         file_row_layout.addWidget(file_path_box)
         file_row_layout.addWidget(QLabel("Label:"))
         file_row_layout.addWidget(label_input)
         file_row_layout.addWidget(settings_button)
+        file_row_layout.addWidget(close_button)
         self.layout.addLayout(file_row_layout)
 
-    def select_file(self, file_path_box, label_input, scale_input=None, shift_input=None, norm_origin_checkbox=None, skip_row_input=None, usecols_input=None):
+    def select_file(self, file_path_box, label_input, close_button, scale_input=None, shift_input=None, norm_origin_checkbox=None, skip_row_input=None, usecols_input=None):
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select File")
         if file_path:
@@ -844,6 +861,7 @@ class FileSelectorApp(QWidget):
             file_path_box.setText(file_name)
             file_path_box.setProperty("full_path", file_path)
             label_input.setPlaceholderText(dir_name)
+            close_button.show()  # Show the close button when a file is selected
             self.update_values()
             self.add_file_row()
 
