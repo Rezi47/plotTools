@@ -790,6 +790,17 @@ class FileSelectorApp(QWidget):
         self.setLayout(self.layout)
 
     def add_file_row(self):
+        # Check if the last row is empty
+        if self.layout.count() > 0:
+            last_row = self.layout.itemAt(self.layout.count() - 1)
+            if isinstance(last_row, QHBoxLayout):
+                file_path_box = last_row.itemAt(1).widget()
+                label_input = last_row.itemAt(3).widget()
+                if file_path_box.text().strip() == "" and label_input.text().strip() == "":
+                    # If the last row is empty, do not add a new row
+                    return
+
+        # Create a new file row
         file_row_layout = QHBoxLayout()
 
         browse_button = QPushButton("📂")
