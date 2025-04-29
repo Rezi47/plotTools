@@ -268,8 +268,6 @@ def normalize_to_origin(parsed_data):
 def save_plot_func(fig, individual_figures, axis_title, fig_title):
     """Saves the plot and logs the saved paths."""
     output_dir = "."
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
 
     # Log file to store saved paths
     saved_paths = []
@@ -293,10 +291,12 @@ def save_plot_func(fig, individual_figures, axis_title, fig_title):
     return saved_paths
 
 def save_data_func(parsed_data, labels, fig_title, x_axis_title, axis_title):
-    base_dir = os.path.dirname(files[0]) if files else ""
-    output_dir = os.path.join(base_dir, "extractedData")
+
+    output_dir = "./extracted_data"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+
+    saved_paths = []
 
     # First determine the maximum number of variables across all datasets
     max_vars = max(len(variables) for _, variables in parsed_data)
@@ -334,9 +334,9 @@ def save_data_func(parsed_data, labels, fig_title, x_axis_title, axis_title):
                         row_data.append(var_val)
                 
                 f.write(",".join(row_data) + "\n")
-        
+        saved_paths.append(file_path)
         print(f"Saved Variable {var_idx+1} data in: {file_path}")
-    return output_dir
+    return saved_paths
         
 
 def interactive_plot_type_selection_QT():
@@ -483,8 +483,12 @@ def interactive_plot_type_selection_QT():
         update_values()
         parsed_data = extract_data(files, plot_type)
         # if norm_origin: normalize_to_origin(parsed_data)
-        output_dir = save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, axis_title)
-        QMessageBox.information(window, "Success", f"Extracted data saved to: {output_dir}")
+        saved_paths = save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, axis_title)
+        
+        # Format the saved paths as a list for the QMessageBox
+        saved_paths_list = "\n".join(saved_paths)
+        QMessageBox.information(window, "Success", f"Extraced Data saved to:\n\n{saved_paths_list}")
+
 
     def update_file_paths(updated_files):
         nonlocal files
@@ -1040,7 +1044,7 @@ if __name__ == "__main__":
 
         # Show the window
         window.setWindowTitle("Plot Viewer")
-        window.resize(800, 600)
+        window.resize(800, 700)
         window.show()
         app.exec_()
 
@@ -1049,5 +1053,3 @@ if __name__ == "__main__":
             save_plot_func(canvas.fig, canvas.individual_figures, y_axis_title, fig_title)
         if save_data:
             save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, y_axis_title)
-
-
