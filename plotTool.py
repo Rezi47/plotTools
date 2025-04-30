@@ -821,13 +821,13 @@ class FileSelectorApp(QWidget):
         close_button.clicked.connect(remove_row)
 
         # Add widgets to the horizontal layout
-        file_row_layout.addWidget(close_button_spacer)  # Add the spacer for the close button
-        file_row_layout.addWidget(close_button)
         file_row_layout.addWidget(browse_button)
         file_row_layout.addWidget(file_path_box)
         file_row_layout.addWidget(label_title)
         file_row_layout.addWidget(label_input)
         file_row_layout.addWidget(settings_button)
+        file_row_layout.addWidget(close_button_spacer)  # Add the spacer for the close button
+        file_row_layout.addWidget(close_button)
         self.layout.addLayout(file_row_layout)
 
     def select_file(self, file_path_box, label_input, close_button, close_button_spacer, scale_input=None, shift_input=None, norm_origin_checkbox=None, skip_row_input=None, usecols_input=None):
