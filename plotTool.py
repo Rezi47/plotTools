@@ -539,6 +539,7 @@ def interactive_plot_type_selection_QT():
     file_selector.files_updated.connect(update_file_paths)
     settings_layout.addWidget(file_selector)
 
+    ############### Buttons ###############
     button_layout = QHBoxLayout()
     
     plot_button = QPushButton("👁️ Plot")
@@ -578,7 +579,7 @@ def interactive_plot_type_selection_QT():
     button_layout.addWidget(write_data_button)
     settings_layout.addLayout(button_layout)
 
-    # Right panel (Plot)
+    ############### Plot Panel ###############
     plot_widget = QWidget()
     plot_layout = QVBoxLayout(plot_widget)
     canvas = PlotCanvas(plot_widget, width=5, height=4, dpi=100)
@@ -763,6 +764,10 @@ class FileSelectorApp(QWidget):
         # Create a new file row
         file_row_layout = QHBoxLayout()
 
+        # Add a fixed-width spacer for the close button
+        close_button_spacer = QLabel()  # Empty QLabel as a spacer
+        close_button_spacer.setFixedSize(20, 20)  # Same size as the close button
+
         browse_button = QPushButton("📂")
         browse_button.setFixedSize(30, 30)
 
@@ -776,6 +781,8 @@ class FileSelectorApp(QWidget):
             "usecols": None
         })  # Initialize default settings
 
+        label_title = QLabel("Label:")
+
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
 
@@ -783,14 +790,25 @@ class FileSelectorApp(QWidget):
         settings_button.setFixedSize(80, 30)
 
         close_button = QPushButton("❌")  # Add a close button
-        close_button.setFixedSize(30, 30)
+        close_button.setFixedSize(20, 20)
+        close_button.setStyleSheet("""
+        QPushButton {
+            background-color: transparent;  /* No background */
+            border: none;                   /* No border */
+            font-size: 14px;                /* Adjust font size for the cross symbol */
+            color: black;                   /* Cross color */
+        }
+        QPushButton:hover {
+            color: red;                     /* Change color on hover */
+        }
+        """)
         close_button.hide()  # Initially hide the close button
 
         # Connect the settings button to open the settings dialog
         settings_button.clicked.connect(lambda: self.open_settings_dialog(file_path_box))
         label_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input))
 
-        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input, close_button))
+        browse_button.clicked.connect(partial(self.select_file, file_path_box, label_input, close_button, close_button_spacer))
 
         # Connect the close button to remove the row
         def remove_row():
@@ -804,15 +822,16 @@ class FileSelectorApp(QWidget):
         close_button.clicked.connect(remove_row)
 
         # Add widgets to the horizontal layout
+        file_row_layout.addWidget(close_button_spacer)  # Add the spacer for the close button
+        file_row_layout.addWidget(close_button)
         file_row_layout.addWidget(browse_button)
         file_row_layout.addWidget(file_path_box)
-        file_row_layout.addWidget(QLabel("Label:"))
+        file_row_layout.addWidget(label_title)
         file_row_layout.addWidget(label_input)
         file_row_layout.addWidget(settings_button)
-        file_row_layout.addWidget(close_button)
         self.layout.addLayout(file_row_layout)
 
-    def select_file(self, file_path_box, label_input, close_button, scale_input=None, shift_input=None, norm_origin_checkbox=None, skip_row_input=None, usecols_input=None):
+    def select_file(self, file_path_box, label_input, close_button, close_button_spacer, scale_input=None, shift_input=None, norm_origin_checkbox=None, skip_row_input=None, usecols_input=None):
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select File")
         if file_path:
@@ -822,6 +841,7 @@ class FileSelectorApp(QWidget):
             file_path_box.setProperty("full_path", file_path)
             label_input.setPlaceholderText(dir_name)
             close_button.show()  # Show the close button when a file is selected
+            close_button_spacer.hide()
             self.update_values()
             self.add_file_row()
 
