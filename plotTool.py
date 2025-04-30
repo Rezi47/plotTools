@@ -18,6 +18,584 @@ import sys
 
 app = QApplication(sys.argv)
 
+def extract_general_values(file_path, skip_row, usecols):
+    """
+    Reads data from the given file and general values.
+    """
+    with open(file_path, "r") as infile:
+        cleaned_data = "".join(line.replace("(", "").replace(")", "") for line in infile)
+    cleaned_file = StringIO(cleaned_data)
+    data = np.loadtxt(cleaned_file, delimiter=None, skiprows=skip_row, usecols=(usecols))
+    times = data[:, 0]
+    variable_data = data[:, 1:].T
+    return times, variable_data
+                
+def extract_motion_values(file_path, skip_row, usecols):
+    """
+    Reads data from the given file and motion values.
+    """
+    times = []
+    variable_data = []
+
+    previous_line = ""  # Keep track of the previous line
+    with open(file_path, 'r') as file:
+        for line in file:
+            if line.startswith("Time =") and previous_line.startswith("deltaT"):
+                time_str = line.split('=')[1].strip()
+                if time_str.endswith("s"):  # Check if the string ends with "s"
+                    time_str = time_str[:-1]  # Remove the "s"
+                time = float(time_str)  # Convert the cleaned string to a float
+                times.append(time)            
+            previous_line = line  # Update the previous line
+
+            if line.strip().startswith('q ='):
+                # Extract the content inside parentheses
+                start = line.find('(') + 1
+                end = line.find(')')
+                if start > 0 and end > start:  # Ensure valid indices
+                    values = list(map(float, line[start:end].split()))
+                    variable_data.append(values)
+
+    # Transpose the list of lists to separate variables
+    variable_data = list(map(list, zip(*variable_data))) if variable_data else []
+    return np.array(times), [np.array(var) for var in variable_data]
+
+fig_config = {
+    'general': {
+        'label': 'General',
+        'def_axis_title': 'Amplitude',
+        'def_dimension': '-',
+        'function': extract_general_values
+    },
+    'motion': {
+        'label': 'Motion',
+        'def_axis_title': 'Heave',
+        'def_dimension': 'm',
+        'function': extract_motion_values
+    },
+}
+
+def extract_data(files, plot_type):
+    parsed_data = []
+
+    for file_info in files:
+        file_path = file_info["path"]
+        scale = file_info["scale"]
+        shift = file_info["shift"]
+        norm_origin = file_info["norm_origin"]
+        skip_row = file_info["skip_row"]
+        usecols = file_info["usecols"]
+
+        if plot_type in fig_config:
+            times, variable_data = fig_config[plot_type]['function'](file_path, skip_row, usecols)
+        else:
+            sys.exit(f"Unknown plot_type: {plot_type}. Available plot_type: {', '.join(fig_config.keys())}")
+
+        # Ensure arrays have the same length
+        min_length = min(len(times), len(variable_data[0]))
+        times, variable_data = times[:min_length], variable_data[:min_length]
+
+        # Apply shifts and scaling
+        for i, var in enumerate(variable_data):
+            var = var / scale
+            var = var + shift
+            variable_data[i] = var
+
+        # Normalize to origin if needed
+        if norm_origin:
+            for var_array in variable_data:
+                if len(var_array) > 0:
+                    first_value = np.mean(var_array)
+                    var_array -= first_value
+
+        parsed_data.append((times, variable_data))
+
+    return parsed_data
+
+def save_plot_func(fig, individual_figures, axis_title, fig_title):
+    """Saves the plot and logs the saved paths."""
+    output_dir = "."
+
+    # Log file to store saved paths
+    saved_paths = []
+
+    # Save the main figure
+    sp_file = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}figure.png")
+    fig.savefig(sp_file)
+    saved_paths.append(sp_file)
+    print(f"Figure saved to {sp_file}")
+
+    if not len(individual_figures) == 1:
+        # Save individual figures
+        ind_output_dir = "./individual_figures"
+        if not os.path.exists(ind_output_dir):
+            os.makedirs(ind_output_dir)
+        for variable_name, fig in individual_figures.items():
+            ind_sp_file = os.path.join(ind_output_dir, f"{fig_title + '_' if fig_title else ''}{variable_name}.png")
+            fig.savefig(ind_sp_file)
+            saved_paths.append(ind_sp_file)
+            print(f"Saved {variable_name} to {ind_sp_file}")
+
+    return saved_paths
+
+def save_data_func(parsed_data, labels, fig_title, x_axis_title, axis_title):
+
+    output_dir = "./extracted_data"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    saved_paths = []
+
+    # First determine the maximum number of variables across all datasets
+    max_vars = max(len(variables) for _, variables in parsed_data)
+    
+   
+    # Create one file per variable index
+    for var_idx in range(max_vars):
+        # Create filename for this variable index
+        file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}Variable_{var_idx+1}.csv")
+        title = axis_title[var_idx] if var_idx < len(axis_title) else axis_title[0]
+
+        with open(file_path, 'w') as f:
+            # Write header - Time columns for each dataset that has this variable
+            headers = []
+            for label, (times, variables) in zip(labels, parsed_data):
+                if var_idx < len(variables):
+                    headers.append(f"{x_axis_title}")
+                    headers.append(f"{title}_{label}")
+            f.write(",".join(headers) + "\n")
+            
+            # Find maximum time length across datasets that have this variable
+            relevant_datasets = [times for times, variables in parsed_data if var_idx < len(variables)]
+            max_length = max(len(times) for times in relevant_datasets) if relevant_datasets else 0
+            
+            # Write data rows
+            for row_idx in range(max_length):
+                row_data = []
+                for (times, variables), label in zip(parsed_data, labels):
+                    if var_idx < len(variables):
+                        # Add time value if exists, else empty
+                        time_val = str(times[row_idx]) if row_idx < len(times) else ""
+                        row_data.append(time_val)
+                        # Add variable value if exists, else empty
+                        var_val = str(variables[var_idx][row_idx]) if row_idx < len(variables[var_idx]) else ""
+                        row_data.append(var_val)
+                
+                f.write(",".join(row_data) + "\n")
+        saved_paths.append(file_path)
+        print(f"Saved Variable {var_idx+1} data in: {file_path}")
+    return saved_paths
+        
+def interactive_plot_type_selection_QT():
+    plot_type = None
+    x_min = None
+    x_max = None
+    fig_title = None
+    x_axis_title = None
+    x_axis_dim = None
+    axis_title = []
+    axis_dim = []
+    files = []
+    scale = []
+    shift = []
+    skip_row = []
+    usecols = []
+    norm_origin = False
+    fig_width = None
+    fig_height = None
+    
+    def update_values():
+        nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, x_axis_title, x_axis_dim, axis_title, axis_dim, skip_row, usecols, fig_width, fig_height
+
+        axis_title = []
+        axis_dim = []
+
+        # Validate axis_title_inputs and axis_dim_inputs
+        for row_index, (title_input, dim_input) in enumerate(zip(axis_title_inputs, axis_dim_inputs)):
+            title = title_input.text().strip()
+            dim = dim_input.text().strip()
+
+            # Check if one is empty while the other is filled
+            if (title and not dim) or (dim and not title):
+                QMessageBox.critical(
+                    window,
+                    "Input Error",
+                    f"Row {row_index + 1}: Both 'Axis Title' and 'Dimension' must be filled if one is provided."
+                )
+                return  # Stop execution until the user fixes the input
+
+            # Add valid inputs to the lists
+            if title or dim:  # Only add rows where at least one field is non-empty
+                axis_title.append(title)
+                axis_dim.append(dim)
+
+        # Handle other values
+        fig_title = fig_title_input.text() if fig_title_input.text() else None
+        x_min = float(x_min_input.text()) if x_min_input.text() else None
+        x_max = float(x_max_input.text()) if x_max_input.text() else None
+
+                # Get user-defined figure dimensions
+        fig_width = float(fig_width_input.text()) if fig_width_input.text() else 4
+        fig_height = float(fig_height_input.text()) if fig_height_input.text() else 4
+
+        # Get x-axis title and dimension
+        x_axis_title = x_axis_title_input.text().strip()
+        x_axis_dim = x_axis_dim_input.text().strip()
+
+    def set_plot_type(plot_value):
+        nonlocal plot_type
+        plot_type = plot_value
+        axis_title_inputs[0].setText(fig_config[plot_type]['def_axis_title'])
+        axis_dim_inputs[0].setText(fig_config[plot_type]['def_dimension'])
+        x_axis_title_input.setText("t")
+        x_axis_dim_input.setText("s")
+
+        update_values()  # Capture the latest values when plot type is selected
+
+        # Change the style of the selected button to indicate it's selected
+        for button in plot_buttons.values():
+            button.setStyleSheet('background-color: none')  # Reset all buttons
+        plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
+ 
+    def plot_button_clicked():
+        if not files:
+            QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
+            return
+
+        update_values()
+        parsed_data = extract_data(files, plot_type)
+
+        canvas.plot(
+            parsed_data,
+            [file["label"] for file in files],
+            x_min,
+            x_max,
+            fig_title,
+            axis_title,
+            axis_dim,
+            fig_width,
+            fig_height,
+            x_axis_title,
+            x_axis_dim
+        )
+
+        # Enable the "Save Plot" button after plotting
+        write_plot_button.setEnabled(True)
+        write_plot_button.setStyleSheet("""
+            font-size: 15px;
+            font-weight: bold;
+            padding: 3px;
+            color: white;
+            background-color: #007BFF;
+            border-radius: 3px;
+        """)
+
+        # Show the plot panel and adjust sizes
+        if not plot_widget.isVisible():
+            splitter.addWidget(plot_widget)  # Add the plot widget to the splitter
+            splitter.setStretchFactor(0, 0)  # Keep settings_panel fixed
+            splitter.setStretchFactor(1, 1)  # Allow plot_widget to stretch
+            plot_widget.show()  # Show the plot widget
+
+        # Resize the main window dynamically based on max_num_variables
+        max_num_variables = max(len(item[1]) for item in parsed_data)
+        rows = (max_num_variables + 1) // 2  # Calculate the number of rows (2 figures per row)
+        cols = 2 if max_num_variables > 1 else 1  # Use 2 columns if more than 1 figure
+
+        # Calculate the new window size
+        new_width = (fig_width * cols * 100) + 450
+        new_height = fig_height * rows * 100
+        
+        window.adjustSize()
+        # Resize the window (convert to integers)
+        window.resize(int(new_width), int(new_height))
+
+    def write_plot_button_clicked():
+        # Save the plot using the canvas's figure
+        update_values()
+        saved_paths = save_plot_func(canvas.fig, canvas.individual_figures, axis_title, fig_title)
+
+        # Format the saved paths as a list for the QMessageBox
+        saved_paths_list = "\n".join(saved_paths)
+        QMessageBox.information(window, "Success", f"Figures saved to:\n\n{saved_paths_list}")
+
+    def write_data_button_clicked():
+        if not files:
+            QMessageBox.critical(window, "Error", "Please select at least one file to process.")
+            return
+        
+        update_values()
+        parsed_data = extract_data(files, plot_type)
+        saved_paths = save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, axis_title)
+        
+        # Format the saved paths as a list for the QMessageBox
+        saved_paths_list = "\n".join(saved_paths)
+        QMessageBox.information(window, "Success", f"Extraced Data saved to:\n\n{saved_paths_list}")
+
+    def update_file_paths(updated_files):
+        nonlocal files
+        files = updated_files
+
+    def add_axis_row():
+        axis_row_layout = QHBoxLayout()
+        axis_title_label = QLabel("Title:")
+        axis_title_input = QLineEdit()
+        axis_dim_label = QLabel("Dimension:")
+        axis_dim_input = QLineEdit()
+
+        # Set fixed width for input fields
+        axis_title_input.setFixedWidth(140)
+        axis_dim_input.setFixedWidth(70)
+
+        # Add widgets to the horizontal layout
+        axis_row_layout.addWidget(axis_title_label)
+        axis_row_layout.addWidget(axis_title_input)
+        axis_row_layout.addSpacing(10)
+        axis_row_layout.addWidget(axis_dim_label)
+        axis_row_layout.addWidget(axis_dim_input)
+        axis_row_layout.addStretch()
+
+        # Add the new row to the container layout
+        axis_container_layout.addLayout(axis_row_layout)
+
+        # Keep track of the row
+        axis_title_inputs.append(axis_title_input)
+        axis_dim_inputs.append(axis_dim_input)
+
+        # Connect signals to dynamically add new rows
+        axis_title_input.textChanged.connect(lambda: check_and_add_row(axis_title_input, axis_dim_input))
+        axis_dim_input.textChanged.connect(lambda: check_and_add_row(axis_title_input, axis_dim_input))
+
+    def check_and_add_row(title_input, dim_input):
+        if title_input.text() or dim_input.text():
+            # Ensure a new row is added only once
+            title_input.textChanged.disconnect()
+            dim_input.textChanged.disconnect()
+            add_axis_row()
+
+    def create_section_title_with_line(title):
+        """Creates a horizontal line with a title aligned to the left and a line extending to the right."""
+        layout = QHBoxLayout()
+
+        # Left line
+        left_line = QFrame()
+        left_line.setFrameShape(QFrame.HLine)
+        left_line.setFrameShadow(QFrame.Sunken)
+
+        # Title
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-size: 14px; padding-right: 10px;")
+
+        # Right line
+        right_line = QFrame()
+        right_line.setFrameShape(QFrame.HLine)
+        right_line.setFrameShadow(QFrame.Sunken)
+
+        layout.addWidget(left_line, 1) 
+        layout.addWidget(title_label, 0)  
+        layout.addWidget(right_line, 1) 
+
+        # Remove extra spacing around the layout
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)  # Adjust spacing between the title and lines
+
+        return layout
+     
+    # Main window with QSplitter
+    window = QWidget()
+    window.setWindowTitle("Plot Tools (v0.1)")
+    splitter = QSplitter(Qt.Horizontal)  # Horizontal splitter
+
+    # Left panel (Settings)
+    settings_panel = QWidget()
+    settings_layout = QVBoxLayout(settings_panel)
+    settings_layout.setAlignment(Qt.AlignTop)  # Align all widgets to the top
+
+    # Set a fixed width for the settings panel
+    # settings_panel.setFixedWidth(420)  # Adjust this value based on your widgets
+    settings_panel.setLayout(settings_layout)
+
+    # Add only the settings panel to the splitter initially
+    splitter.addWidget(settings_panel)
+
+    ########### Plot Type Selection ###########
+    title_label = QLabel("Plot Setting panel")
+    title_label.setAlignment(Qt.AlignCenter)
+    title_label.setStyleSheet("font-size: 14px; font-weight: bold; margin-bottom: 10px;")
+    settings_layout.addWidget(title_label)
+    settings_layout.addLayout(create_section_title_with_line("Plot Type"))
+
+    plot_buttons = {key: QPushButton(config['label']) for key, config in fig_config.items()}
+
+    for plot_value, button in plot_buttons.items():
+        button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
+        settings_layout.addWidget(button)
+
+    # Auto-click the "general" button
+    QTimer.singleShot(100, plot_buttons["general"].click)
+
+    ########### Figure Properties ###########
+    settings_layout.addLayout(create_section_title_with_line("Figure Properties"))
+
+    fig_title_layout = QHBoxLayout()
+    fig_title_label = QLabel("Figure title:")
+    fig_title_input = QLineEdit()
+
+    fig_title_input.setFixedWidth(140)
+
+    fig_title_layout.addWidget(fig_title_label)
+    fig_title_layout.addWidget(fig_title_input)
+    fig_title_layout.addStretch()
+
+    settings_layout.addLayout(fig_title_layout)
+    
+    # Add input fields for "Figure Width" and "Figure Height"
+    fig_size_layout = QHBoxLayout()
+    fig_width_label = QLabel("Figure Width:")
+    fig_width_input = QLineEdit("4")  # Default width
+    fig_height_label = QLabel("Figure Height:")
+    fig_height_input = QLineEdit("4")  # Default height
+
+    fig_width_input.setFixedWidth(60)
+    fig_height_input.setFixedWidth(60)
+
+    fig_size_layout.addWidget(fig_width_label)
+    fig_size_layout.addWidget(fig_width_input)
+    fig_size_layout.addSpacing(10)
+    fig_size_layout.addWidget(fig_height_label)
+    fig_size_layout.addWidget(fig_height_input)
+    fig_size_layout.addStretch()
+
+    settings_layout.addLayout(fig_size_layout)
+
+    ########### X-Axis Settings ###########
+    settings_layout.addLayout(create_section_title_with_line("X-Axis"))
+
+    # Add input fields for "X-Axis Title" and "X-Axis Dimension"
+    x_axis_layout = QHBoxLayout()
+    x_axis_title_label = QLabel("Title:")
+    x_axis_title_input = QLineEdit()
+    x_axis_dim_label = QLabel("Dimension:")
+    x_axis_dim_input = QLineEdit()
+
+    # Set fixed width for input fields
+    x_axis_title_input.setFixedWidth(140)
+    x_axis_dim_input.setFixedWidth(70)
+
+    # Add widgets to the horizontal layout
+    x_axis_layout.addWidget(x_axis_title_label)
+    x_axis_layout.addWidget(x_axis_title_input)
+    x_axis_layout.addSpacing(10)
+    x_axis_layout.addWidget(x_axis_dim_label)
+    x_axis_layout.addWidget(x_axis_dim_input)
+    x_axis_layout.addStretch()
+
+    # Add the layout to the settings panel
+    settings_layout.addLayout(x_axis_layout)
+
+
+    # Add input fields for "x min" and "x max" in the same row
+    x_layout = QHBoxLayout()
+    range_label = QLabel("x Range:")
+    x_min_input = QLineEdit()
+    seperator = QLabel("-   ")
+    x_max_input = QLineEdit()
+
+    x_min_input.setFixedWidth(50)
+    x_max_input.setFixedWidth(50)
+
+    # Add spacing between the labels and inputs
+    x_layout.addWidget(range_label)
+    x_layout.addWidget(x_min_input)
+    x_layout.addSpacing(10) # Reduced spacing between scale and shift
+    x_layout.addWidget(seperator)
+    x_layout.addWidget(x_max_input)
+    x_layout.addStretch()  # Push everything to the left
+
+    # Align elements in the row
+    x_layout.setAlignment(Qt.AlignLeft)
+    settings_layout.addLayout(x_layout)
+
+    ########### Y-Axis Settings ###########
+    settings_layout.addLayout(create_section_title_with_line("Y-Axis"))
+
+    # Keep track of all axis rows
+    axis_title_inputs = []
+    axis_dim_inputs = []
+
+    # Create a dedicated container layout for axis rows
+    axis_container_layout = QVBoxLayout()
+    settings_layout.addLayout(axis_container_layout)  # Add the container to the main settings layout
+
+    # Add the initial axis row
+    add_axis_row()
+
+    ########### File Selection ###########
+    file_selection_layout = create_section_title_with_line("File Selection")
+    settings_layout.addLayout(file_selection_layout)
+
+    # Integrate FileSelectorApp (Browse button functionality)
+    file_selector = FileSelectorApp()
+    file_selector.files_updated.connect(update_file_paths)
+    settings_layout.addWidget(file_selector)
+
+    button_layout = QHBoxLayout()
+    
+    plot_button = QPushButton("👁️ Plot")
+    plot_button.clicked.connect(plot_button_clicked)
+    plot_button.setFixedSize(120, 40)
+    
+    write_plot_button = QPushButton("💾 Save Plot")
+    write_plot_button.setEnabled(False)
+    write_plot_button.setStyleSheet("""
+        font-size: 15px;
+        font-weight: bold;
+        padding: 3px;
+        color: gray;
+        background-color: #d3d3d3;
+        border-radius: 3px;
+    """)
+    write_plot_button.clicked.connect(write_plot_button_clicked)
+    write_plot_button.setFixedSize(120, 40)
+    
+    write_data_button = QPushButton("📊 Save Data")
+    write_data_button.clicked.connect(write_data_button_clicked)
+    write_data_button.setFixedSize(120, 40)
+    
+    # Style all buttons consistently
+    for button in [plot_button, write_data_button]:
+        button.setStyleSheet("""
+        font-size: 15px;
+        font-weight: bold;
+        padding: 3px;
+        color: white;
+        background-color: #007BFF;
+        border-radius: 3px;
+        """)
+    
+    button_layout.addWidget(plot_button)
+    button_layout.addWidget(write_plot_button)
+    button_layout.addWidget(write_data_button)
+    settings_layout.addLayout(button_layout)
+
+    # Right panel (Plot)
+    plot_widget = QWidget()
+    plot_layout = QVBoxLayout(plot_widget)
+    canvas = PlotCanvas(plot_widget, width=5, height=4, dpi=100)
+    plot_layout.addWidget(canvas)
+    plot_widget.setLayout(plot_layout)
+    plot_widget.hide()  # Initially hide the plot widget
+
+    # Add the splitter to the main layout
+    main_layout = QVBoxLayout(window)
+    main_layout.addWidget(splitter)
+    window.setLayout(main_layout)
+
+    # Show the main window
+    window.adjustSize()
+    window.show()
+    app.exec_()
+
 class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
@@ -157,602 +735,6 @@ class PlotCanvas(FigureCanvas):
         self.dragging_title = False
         self.dragging_legend = None
         self.last_mouse_pos = None
-
-def extract_general_values(file_path, skip_row, usecols):
-    """
-    Reads data from the given file and general values.
-    """
-    with open(file_path, "r") as infile:
-        cleaned_data = "".join(line.replace("(", "").replace(")", "") for line in infile)
-    cleaned_file = StringIO(cleaned_data)
-    data = np.loadtxt(cleaned_file, delimiter=None, skiprows=skip_row, usecols=(usecols))
-    times = data[:, 0]
-    variable_data = data[:, 1:].T
-    return times, variable_data
-                
-def extract_motion_values(file_path, skip_row, usecols):
-    """
-    Reads data from the given file and motion values.
-    """
-    times = []
-    variable_data = []
-
-    previous_line = ""  # Keep track of the previous line
-    with open(file_path, 'r') as file:
-        for line in file:
-            if line.startswith("Time =") and previous_line.startswith("deltaT"):
-                time_str = line.split('=')[1].strip()
-                if time_str.endswith("s"):  # Check if the string ends with "s"
-                    time_str = time_str[:-1]  # Remove the "s"
-                time = float(time_str)  # Convert the cleaned string to a float
-                times.append(time)            
-            previous_line = line  # Update the previous line
-
-            if line.strip().startswith('q ='):
-                # Extract the content inside parentheses
-                start = line.find('(') + 1
-                end = line.find(')')
-                if start > 0 and end > start:  # Ensure valid indices
-                    values = list(map(float, line[start:end].split()))
-                    variable_data.append(values)
-
-    # Transpose the list of lists to separate variables
-    variable_data = list(map(list, zip(*variable_data))) if variable_data else []
-    return np.array(times), [np.array(var) for var in variable_data]
-
-fig_config = {
-    'general': {
-        'label': 'General',
-        'def_axis_title': 'Amplitude',
-        'def_dimension': '-',
-        'function': extract_general_values
-    },
-    'motion': {
-        'label': 'Motion',
-        'def_axis_title': 'Heave',
-        'def_dimension': 'm',
-        'function': extract_motion_values
-    },
-}
-
-def extract_data(files, plot_type):
-    parsed_data = []
-
-    for file_info in files:
-        file_path = file_info["path"]
-        scale = file_info["scale"]
-        shift = file_info["shift"]
-        norm_origin = file_info["norm_origin"]
-        skip_row = file_info["skip_row"]
-        usecols = file_info["usecols"]
-
-        if plot_type in fig_config:
-            times, variable_data = fig_config[plot_type]['function'](file_path, skip_row, usecols)
-        else:
-            sys.exit(f"Unknown plot_type: {plot_type}. Available plot_type: {', '.join(fig_config.keys())}")
-
-        # Ensure arrays have the same length
-        min_length = min(len(times), len(variable_data[0]))
-        times, variable_data = times[:min_length], variable_data[:min_length]
-
-        # Apply shifts and scaling
-        for i, var in enumerate(variable_data):
-            var = var / scale
-            var = var + shift
-            variable_data[i] = var
-
-        # Normalize to origin if needed
-        if norm_origin:
-            for var_array in variable_data:
-                if len(var_array) > 0:
-                    first_value = np.mean(var_array)
-                    var_array -= first_value
-
-        parsed_data.append((times, variable_data))
-
-    return parsed_data
-
-def normalize_to_origin(parsed_data):
-    """
-    Normalizes each variable's data in-place by subtracting its first value,
-    making all variables start at 0 at the beginning of time.
-    Modifies the input data directly instead of returning a new object.
-    """
-    for _, variable_data in parsed_data:  # Loop through each (times, variable_data) pair
-        for var_array in variable_data:   # Loop through each variable array
-            if len(var_array) > 0:
-                first_value = np.mean(var_array)
-                var_array -= first_value  # Subtract first value in-place (modifies original array)
-
-
-def save_plot_func(fig, individual_figures, axis_title, fig_title):
-    """Saves the plot and logs the saved paths."""
-    output_dir = "."
-
-    # Log file to store saved paths
-    saved_paths = []
-
-    # Save the main figure
-    sp_file = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}figure.png")
-    fig.savefig(sp_file)
-    saved_paths.append(sp_file)
-    print(f"Figure saved to {sp_file}")
-
-    if not len(individual_figures) == 1:
-        # Save individual figures
-        ind_output_dir = "./individual_figures"
-        if not os.path.exists(ind_output_dir):
-            os.makedirs(ind_output_dir)
-        for variable_name, fig in individual_figures.items():
-            ind_sp_file = os.path.join(ind_output_dir, f"{fig_title + '_' if fig_title else ''}{variable_name}.png")
-            fig.savefig(ind_sp_file)
-            saved_paths.append(ind_sp_file)
-            print(f"Saved {variable_name} to {ind_sp_file}")
-
-    return saved_paths
-
-def save_data_func(parsed_data, labels, fig_title, x_axis_title, axis_title):
-
-    output_dir = "./extracted_data"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    saved_paths = []
-
-    # First determine the maximum number of variables across all datasets
-    max_vars = max(len(variables) for _, variables in parsed_data)
-    
-   
-    # Create one file per variable index
-    for var_idx in range(max_vars):
-        # Create filename for this variable index
-        file_path = os.path.join(output_dir, f"{fig_title + '_' if fig_title else ''}Variable_{var_idx+1}.csv")
-        title = axis_title[var_idx] if var_idx < len(axis_title) else axis_title[0]
-
-        with open(file_path, 'w') as f:
-            # Write header - Time columns for each dataset that has this variable
-            headers = []
-            for label, (times, variables) in zip(labels, parsed_data):
-                if var_idx < len(variables):
-                    headers.append(f"{x_axis_title}")
-                    headers.append(f"{title}_{label}")
-            f.write(",".join(headers) + "\n")
-            
-            # Find maximum time length across datasets that have this variable
-            relevant_datasets = [times for times, variables in parsed_data if var_idx < len(variables)]
-            max_length = max(len(times) for times in relevant_datasets) if relevant_datasets else 0
-            
-            # Write data rows
-            for row_idx in range(max_length):
-                row_data = []
-                for (times, variables), label in zip(parsed_data, labels):
-                    if var_idx < len(variables):
-                        # Add time value if exists, else empty
-                        time_val = str(times[row_idx]) if row_idx < len(times) else ""
-                        row_data.append(time_val)
-                        # Add variable value if exists, else empty
-                        var_val = str(variables[var_idx][row_idx]) if row_idx < len(variables[var_idx]) else ""
-                        row_data.append(var_val)
-                
-                f.write(",".join(row_data) + "\n")
-        saved_paths.append(file_path)
-        print(f"Saved Variable {var_idx+1} data in: {file_path}")
-    return saved_paths
-        
-
-def interactive_plot_type_selection_QT():
-    plot_type = None
-    x_min = None
-    x_max = None
-    fig_title = None
-    x_axis_title = None
-    x_axis_dim = None
-    axis_title = []
-    axis_dim = []
-    files = []
-    scale = []
-    shift = []
-    skip_row = []
-    usecols = []
-    norm_origin = False
-    fig_width = None
-    fig_height = None
-    
-    def update_values():
-        nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, x_axis_title, x_axis_dim, axis_title, axis_dim, skip_row, usecols, fig_width, fig_height
-
-        axis_title = []
-        axis_dim = []
-
-        # Validate axis_title_inputs and axis_dim_inputs
-        for row_index, (title_input, dim_input) in enumerate(zip(axis_title_inputs, axis_dim_inputs)):
-            title = title_input.text().strip()
-            dim = dim_input.text().strip()
-
-            # Check if one is empty while the other is filled
-            if (title and not dim) or (dim and not title):
-                QMessageBox.critical(
-                    window,
-                    "Input Error",
-                    f"Row {row_index + 1}: Both 'Axis Title' and 'Dimension' must be filled if one is provided."
-                )
-                return  # Stop execution until the user fixes the input
-
-            # Add valid inputs to the lists
-            if title or dim:  # Only add rows where at least one field is non-empty
-                axis_title.append(title)
-                axis_dim.append(dim)
-
-        # Handle other values
-        fig_title = fig_title_input.text() if fig_title_input.text() else None
-        x_min = float(x_min_input.text()) if x_min_input.text() else None
-        x_max = float(x_max_input.text()) if x_max_input.text() else None
-
-                # Get user-defined figure dimensions
-        fig_width = float(fig_width_input.text()) if fig_width_input.text() else 4
-        fig_height = float(fig_height_input.text()) if fig_height_input.text() else 4
-
-        # Get x-axis title and dimension
-        x_axis_title = x_axis_title_input.text().strip()
-        x_axis_dim = x_axis_dim_input.text().strip()
-
-
-
-    def set_plot_type(plot_value):
-        nonlocal plot_type
-        plot_type = plot_value
-        axis_title_inputs[0].setText(fig_config[plot_type]['def_axis_title'])
-        axis_dim_inputs[0].setText(fig_config[plot_type]['def_dimension'])
-        x_axis_title_input.setText("t")
-        x_axis_dim_input.setText("s")
-
-        update_values()  # Capture the latest values when plot type is selected
-
-        # Change the style of the selected button to indicate it's selected
-        for button in plot_buttons.values():
-            button.setStyleSheet('background-color: none')  # Reset all buttons
-        plot_buttons[plot_value].setStyleSheet('background-color: lightblue')  # Highlight the selected one
-  
-
-    def plot_button_clicked():
-        if not files:
-            QMessageBox.critical(window, "Error", "Please select at least one file to plot.")
-            return
-
-        update_values()
-        parsed_data = extract_data(files, plot_type)
-
-        canvas.plot(
-            parsed_data,
-            [file["label"] for file in files],
-            x_min,
-            x_max,
-            fig_title,
-            axis_title,
-            axis_dim,
-            fig_width,
-            fig_height,
-            x_axis_title,
-            x_axis_dim
-        )
-
-        # Enable the "Save Plot" button after plotting
-        write_plot_button.setEnabled(True)
-        write_plot_button.setStyleSheet("""
-            font-size: 15px;
-            font-weight: bold;
-            padding: 3px;
-            color: white;
-            background-color: #007BFF;
-            border-radius: 3px;
-        """)
-
-        # Show the plot panel and adjust sizes
-        if not plot_widget.isVisible():
-            splitter.addWidget(plot_widget)  # Add the plot widget to the splitter
-            splitter.setStretchFactor(0, 0)  # Keep settings_panel fixed
-            splitter.setStretchFactor(1, 1)  # Allow plot_widget to stretch
-            plot_widget.show()  # Show the plot widget
-
-        # Resize the main window dynamically based on max_num_variables
-        max_num_variables = max(len(item[1]) for item in parsed_data)
-        rows = (max_num_variables + 1) // 2  # Calculate the number of rows (2 figures per row)
-        cols = 2 if max_num_variables > 1 else 1  # Use 2 columns if more than 1 figure
-
-        # Calculate the new window size
-        new_width = (fig_width * cols * 100) + 450
-        new_height = fig_height * rows * 100
-        
-        window.adjustSize()
-        # Resize the window (convert to integers)
-        window.resize(int(new_width), int(new_height))
-
-    def write_plot_button_clicked():
-        # Save the plot using the canvas's figure
-        update_values()
-        saved_paths = save_plot_func(canvas.fig, canvas.individual_figures, axis_title, fig_title)
-
-        # Format the saved paths as a list for the QMessageBox
-        saved_paths_list = "\n".join(saved_paths)
-        QMessageBox.information(window, "Success", f"Figures saved to:\n\n{saved_paths_list}")
-
-    def write_data_button_clicked():
-        if not files:
-            QMessageBox.critical(window, "Error", "Please select at least one file to process.")
-            return
-        
-        update_values()
-        parsed_data = extract_data(files, plot_type)
-        # if norm_origin: normalize_to_origin(parsed_data)
-        saved_paths = save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, axis_title)
-        
-        # Format the saved paths as a list for the QMessageBox
-        saved_paths_list = "\n".join(saved_paths)
-        QMessageBox.information(window, "Success", f"Extraced Data saved to:\n\n{saved_paths_list}")
-
-
-    def update_file_paths(updated_files):
-        nonlocal files
-        files = updated_files
-         
-    def create_section_title_with_line(title):
-        """Creates a horizontal line with a title aligned to the left and a line extending to the right."""
-        layout = QHBoxLayout()
-
-        # Left line
-        left_line = QFrame()
-        left_line.setFrameShape(QFrame.HLine)
-        left_line.setFrameShadow(QFrame.Sunken)
-
-        # Title
-        title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 14px; padding-right: 10px;")
-
-        # Right line
-        right_line = QFrame()
-        right_line.setFrameShape(QFrame.HLine)
-        right_line.setFrameShadow(QFrame.Sunken)
-
-        layout.addWidget(left_line, 1) 
-        layout.addWidget(title_label, 0)  
-        layout.addWidget(right_line, 1) 
-
-        # Remove extra spacing around the layout
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)  # Adjust spacing between the title and lines
-
-        return layout
-     
-    # Main window with QSplitter
-    window = QWidget()
-    window.setWindowTitle("Plot Setting")
-    splitter = QSplitter(Qt.Horizontal)  # Horizontal splitter
-
-    # Left panel (Settings)
-    settings_panel = QWidget()
-    settings_layout = QVBoxLayout(settings_panel)
-    settings_layout.setAlignment(Qt.AlignTop)  # Align all widgets to the top
-
-    # Set a fixed width for the settings panel
-    # settings_panel.setFixedWidth(420)  # Adjust this value based on your widgets
-    settings_panel.setLayout(settings_layout)
-
-    # Add only the settings panel to the splitter initially
-    splitter.addWidget(settings_panel)
-
-    ########### Plot Type Selection ###########
-    title_label = QLabel("Select the Plot Type")
-    title_label.setAlignment(Qt.AlignCenter)
-    title_label.setStyleSheet("font-size: 13px; font-weight: regular; margin-bottom: 10px;")
-    settings_layout.addWidget(title_label)
-
-    plot_buttons = {key: QPushButton(config['label']) for key, config in fig_config.items()}
-
-    for plot_value, button in plot_buttons.items():
-        button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
-        settings_layout.addWidget(button)
-
-    # Auto-click the "general" button
-    QTimer.singleShot(100, plot_buttons["general"].click)
-
-    ########### Figure Properties ###########
-    settings_layout.addLayout(create_section_title_with_line("Figure Properties"))
-
-    fig_title_layout = QHBoxLayout()
-    fig_title_label = QLabel("Figure title:")
-    fig_title_input = QLineEdit()
-
-    fig_title_input.setFixedWidth(140)
-
-    fig_title_layout.addWidget(fig_title_label)
-    fig_title_layout.addWidget(fig_title_input)
-    fig_title_layout.addStretch()
-
-    settings_layout.addLayout(fig_title_layout)
-    
-    # Add input fields for "Figure Width" and "Figure Height"
-    fig_size_layout = QHBoxLayout()
-    fig_width_label = QLabel("Figure Width:")
-    fig_width_input = QLineEdit("4")  # Default width
-    fig_height_label = QLabel("Figure Height:")
-    fig_height_input = QLineEdit("4")  # Default height
-
-    fig_width_input.setFixedWidth(60)
-    fig_height_input.setFixedWidth(60)
-
-    fig_size_layout.addWidget(fig_width_label)
-    fig_size_layout.addWidget(fig_width_input)
-    fig_size_layout.addSpacing(10)
-    fig_size_layout.addWidget(fig_height_label)
-    fig_size_layout.addWidget(fig_height_input)
-    fig_size_layout.addStretch()
-
-    settings_layout.addLayout(fig_size_layout)
-
-    ########### X-Axis Settings ###########
-    settings_layout.addLayout(create_section_title_with_line("X-Axis"))
-
-    # Add input fields for "X-Axis Title" and "X-Axis Dimension"
-    x_axis_layout = QHBoxLayout()
-    x_axis_title_label = QLabel("Title:")
-    x_axis_title_input = QLineEdit()
-    x_axis_dim_label = QLabel("Dimension:")
-    x_axis_dim_input = QLineEdit()
-
-    # Set fixed width for input fields
-    x_axis_title_input.setFixedWidth(140)
-    x_axis_dim_input.setFixedWidth(70)
-
-    # Add widgets to the horizontal layout
-    x_axis_layout.addWidget(x_axis_title_label)
-    x_axis_layout.addWidget(x_axis_title_input)
-    x_axis_layout.addSpacing(10)
-    x_axis_layout.addWidget(x_axis_dim_label)
-    x_axis_layout.addWidget(x_axis_dim_input)
-    x_axis_layout.addStretch()
-
-    # Add the layout to the settings panel
-    settings_layout.addLayout(x_axis_layout)
-
-
-    # Add input fields for "x min" and "x max" in the same row
-    x_layout = QHBoxLayout()
-    x_min_label = QLabel("x Range:")
-    x_min_input = QLineEdit()
-    x_max_label = QLabel("-   ")
-    x_max_input = QLineEdit()
-
-    x_min_input.setFixedWidth(50)
-    x_max_input.setFixedWidth(50)
-
-    # Add spacing between the labels and inputs
-    x_layout.addWidget(x_min_label)
-    x_layout.addWidget(x_min_input)
-    x_layout.addSpacing(10) # Reduced spacing between scale and shift
-    x_layout.addWidget(x_max_label)
-    x_layout.addWidget(x_max_input)
-    x_layout.addStretch()  # Push everything to the left
-
-    # Align elements in the row
-    x_layout.setAlignment(Qt.AlignLeft)
-    settings_layout.addLayout(x_layout)
-
-    ########### Y-Axis Settings ###########
-    settings_layout.addLayout(create_section_title_with_line("Y-Axis"))
-
-    # Keep track of all axis rows
-    axis_title_inputs = []
-    axis_dim_inputs = []
-
-    # Create a dedicated container layout for axis rows
-    axis_container_layout = QVBoxLayout()
-    settings_layout.addLayout(axis_container_layout)  # Add the container to the main settings layout
-
-    def add_axis_row():
-        axis_row_layout = QHBoxLayout()
-        axis_title_label = QLabel("Title:")
-        axis_title_input = QLineEdit()
-        axis_dim_label = QLabel("Dimension:")
-        axis_dim_input = QLineEdit()
-
-        # Set fixed width for input fields
-        axis_title_input.setFixedWidth(140)
-        axis_dim_input.setFixedWidth(70)
-
-        # Add widgets to the horizontal layout
-        axis_row_layout.addWidget(axis_title_label)
-        axis_row_layout.addWidget(axis_title_input)
-        axis_row_layout.addSpacing(10)
-        axis_row_layout.addWidget(axis_dim_label)
-        axis_row_layout.addWidget(axis_dim_input)
-        axis_row_layout.addStretch()
-
-        # Add the new row to the container layout
-        axis_container_layout.addLayout(axis_row_layout)
-
-        # Keep track of the row
-        axis_title_inputs.append(axis_title_input)
-        axis_dim_inputs.append(axis_dim_input)
-
-        # Connect signals to dynamically add new rows
-        axis_title_input.textChanged.connect(lambda: check_and_add_row(axis_title_input, axis_dim_input))
-        axis_dim_input.textChanged.connect(lambda: check_and_add_row(axis_title_input, axis_dim_input))
-
-    def check_and_add_row(title_input, dim_input):
-        if title_input.text() or dim_input.text():
-            # Ensure a new row is added only once
-            title_input.textChanged.disconnect()
-            dim_input.textChanged.disconnect()
-            add_axis_row()
-
-    # Add the initial axis row
-    add_axis_row()
-
-    ########### File Selection ###########
-    file_selection_layout = create_section_title_with_line("File Selection")
-    settings_layout.addLayout(file_selection_layout)
-
-    # Integrate FileSelectorApp (Browse button functionality)
-    file_selector = FileSelectorApp()
-    file_selector.files_updated.connect(update_file_paths)
-    settings_layout.addWidget(file_selector)
-
-    button_layout = QHBoxLayout()
-    
-    plot_button = QPushButton("👁️ Plot")
-    plot_button.clicked.connect(plot_button_clicked)
-    plot_button.setFixedSize(120, 40)
-    
-    write_plot_button = QPushButton("💾 Save Plot")
-    write_plot_button.setEnabled(False)
-    write_plot_button.setStyleSheet("""
-        font-size: 15px;
-        font-weight: bold;
-        padding: 3px;
-        color: gray;
-        background-color: #d3d3d3;
-        border-radius: 3px;
-    """)
-    write_plot_button.clicked.connect(write_plot_button_clicked)
-    write_plot_button.setFixedSize(120, 40)
-    
-    write_data_button = QPushButton("📊 Save Data")
-    write_data_button.clicked.connect(write_data_button_clicked)
-    write_data_button.setFixedSize(120, 40)
-    
-    # Style all buttons consistently
-    for button in [plot_button, write_data_button]:
-        button.setStyleSheet("""
-        font-size: 15px;
-        font-weight: bold;
-        padding: 3px;
-        color: white;
-        background-color: #007BFF;
-        border-radius: 3px;
-        """)
-    
-    button_layout.addWidget(plot_button)
-    button_layout.addWidget(write_plot_button)
-    button_layout.addWidget(write_data_button)
-    settings_layout.addLayout(button_layout)
-
-    # Right panel (Plot)
-    plot_widget = QWidget()
-    plot_layout = QVBoxLayout(plot_widget)
-    canvas = PlotCanvas(plot_widget, width=5, height=4, dpi=100)
-    plot_layout.addWidget(canvas)
-    plot_widget.setLayout(plot_layout)
-    plot_widget.hide()  # Initially hide the plot widget
-
-    # Add the splitter to the main layout
-    main_layout = QVBoxLayout(window)
-    main_layout.addWidget(splitter)
-    window.setLayout(main_layout)
-
-    # Show the main window
-    window.adjustSize()
-    window.show()
-    app.exec_()
 
 class FileSelectorApp(QWidget):
     files_updated = pyqtSignal(list)  # Emits the entire files list
@@ -1030,7 +1012,6 @@ def parse_arguments():
         y_axis_title_list,y_axis_dim_list , args.x_min, args.x_max,
         args.save_plot, args.save_data, files
     )
-
 
 if __name__ == "__main__":
     # Ensure QApplication is created only once
