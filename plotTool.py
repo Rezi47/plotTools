@@ -406,7 +406,7 @@ def interactive_plot_type_selection_QT():
     window.setWindowTitle("Plot Tools (v0.1)")
     splitter = QSplitter(Qt.Horizontal)  # Horizontal splitter
 
-    # Left panel (Settings)
+    ############### Plot Setting Panel ###############
     settings_panel = QWidget()
     settings_layout = QVBoxLayout(settings_panel)
     settings_layout.setAlignment(Qt.AlignTop)  # Align all widgets to the top
@@ -418,11 +418,12 @@ def interactive_plot_type_selection_QT():
     # Add only the settings panel to the splitter initially
     splitter.addWidget(settings_panel)
 
-    ########### Plot Type Selection ###########
     title_label = QLabel("Plot Setting panel")
     title_label.setAlignment(Qt.AlignCenter)
     title_label.setStyleSheet("font-size: 14px; font-weight: bold; margin-bottom: 10px;")
     settings_layout.addWidget(title_label)
+
+    ########### Plot Type Selection ###########
     settings_layout.addLayout(create_section_title_with_line("Plot Type"))
 
     plot_buttons = {key: QPushButton(config['label']) for key, config in fig_config.items()}
@@ -493,7 +494,6 @@ def interactive_plot_type_selection_QT():
     # Add the layout to the settings panel
     settings_layout.addLayout(x_axis_layout)
 
-
     # Add input fields for "x min" and "x max" in the same row
     x_layout = QHBoxLayout()
     range_label = QLabel("x Range:")
@@ -531,8 +531,7 @@ def interactive_plot_type_selection_QT():
     add_axis_row()
 
     ########### File Selection ###########
-    file_selection_layout = create_section_title_with_line("File Selection")
-    settings_layout.addLayout(file_selection_layout)
+    settings_layout.addLayout(create_section_title_with_line("File Selection"))
 
     # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
