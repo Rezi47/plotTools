@@ -494,15 +494,9 @@ def interactive_plot_type_selection_QT():
     def update_file_paths(updated_files):
         nonlocal files
         files = updated_files
-        
-    def create_horizontal_line():
-        line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
-        return line
- 
+         
     def create_section_title_with_line(title):
-        """Creates a horizontal line with a title in the middle."""
+        """Creates a horizontal line with a title aligned to the left and a line extending to the right."""
         layout = QHBoxLayout()
 
         # Left line
@@ -512,17 +506,20 @@ def interactive_plot_type_selection_QT():
 
         # Title
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 10px; font-weight: bold; padding: 0 10px;")
+        title_label.setStyleSheet("font-size: 14px; padding-right: 10px;")
 
         # Right line
         right_line = QFrame()
         right_line.setFrameShape(QFrame.HLine)
         right_line.setFrameShadow(QFrame.Sunken)
 
-        # Add widgets to the layout
-        layout.addWidget(left_line)
-        layout.addWidget(title_label)
-        layout.addWidget(right_line)
+        layout.addWidget(left_line, 1) 
+        layout.addWidget(title_label, 0)  
+        layout.addWidget(right_line, 1) 
+
+        # Remove extra spacing around the layout
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)  # Adjust spacing between the title and lines
 
         return layout
      
@@ -543,7 +540,7 @@ def interactive_plot_type_selection_QT():
     # Add only the settings panel to the splitter initially
     splitter.addWidget(settings_panel)
 
-    ########### Add the 1st horizontal line separator ###########
+    ########### Plot Type Selection ###########
     title_label = QLabel("Select the Plot Type")
     title_label.setAlignment(Qt.AlignCenter)
     title_label.setStyleSheet("font-size: 13px; font-weight: regular; margin-bottom: 10px;")
@@ -558,44 +555,9 @@ def interactive_plot_type_selection_QT():
     # Auto-click the "general" button
     QTimer.singleShot(100, plot_buttons["general"].click)
 
-    # # Create a QListWidget for the plot types
-    # plot_type_list = QListWidget()
-    # plot_type_list.setFixedHeight(100)  # Adjust the height as needed
-    # plot_type_list.setStyleSheet("""
-    #     QListWidget {
-    #         border: 1px solid #ccc;
-    #         padding: 5px;
-    #         font-size: 14px;
-    #     }
-    #     QListWidget::item {
-    #         padding: 5px;
-    #     }
-    #     QListWidget::item:selected {
-    #         background-color: #007BFF;
-    #         color: white;
-    #     }
-    # """)
+    ########### Figure Properties ###########
+    settings_layout.addLayout(create_section_title_with_line("Figure Properties"))
 
-    # # Add plot types to the QListWidget
-    # for key, config in fig_config.items():
-    #     plot_type_list.addItem(config['label'])
-
-    # for index in range(plot_type_list.count()):
-    #     item = plot_type_list.item(index)
-    #     plot_value = list(fig_config.keys())[index]  # Map the index to the corresponding plot type key
-    #     item.setData(Qt.UserRole, plot_value)  # Store the plot_value in the item's data
-    #     item.setFlags(item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # Ensure the item is selectable
-    #     item.setSelected(False)  # Deselect by default
-
-    # plot_type_list.itemClicked.connect(lambda item: set_plot_type(item.data(Qt.UserRole)))
-
-    # settings_layout.addWidget(plot_type_list)
-
-    # # Auto-select the first item ("general") in the list
-    # QTimer.singleShot(100, lambda: plot_type_list.setCurrentRow(0))
-    # QTimer.singleShot(100, lambda: set_plot_type(plot_type_list.item(0).text()))
-
-    # Add Figure Title
     fig_title_layout = QHBoxLayout()
     fig_title_label = QLabel("Figure title:")
     fig_title_input = QLineEdit()
@@ -607,10 +569,6 @@ def interactive_plot_type_selection_QT():
     fig_title_layout.addStretch()
 
     settings_layout.addLayout(fig_title_layout)
-
-
-    ########### Add the 2st horizontal line separator ###########
-    settings_layout.addWidget(create_horizontal_line())
     
     # Add input fields for "Figure Width" and "Figure Height"
     fig_size_layout = QHBoxLayout()
@@ -631,9 +589,8 @@ def interactive_plot_type_selection_QT():
 
     settings_layout.addLayout(fig_size_layout)
 
-    ########### Add the X-Axis Section ###########
-    x_axis_section_layout = create_section_title_with_line("X-Axis")
-    settings_layout.addLayout(x_axis_section_layout)
+    ########### X-Axis Settings ###########
+    settings_layout.addLayout(create_section_title_with_line("X-Axis"))
 
     # Add input fields for "X-Axis Title" and "X-Axis Dimension"
     x_axis_layout = QHBoxLayout()
@@ -657,9 +614,31 @@ def interactive_plot_type_selection_QT():
     # Add the layout to the settings panel
     settings_layout.addLayout(x_axis_layout)
 
-    ########### Add the Y-Axis Section ###########
-    y_axis_section_layout = create_section_title_with_line("Y-Axis")
-    settings_layout.addLayout(y_axis_section_layout)
+
+    # Add input fields for "x min" and "x max" in the same row
+    x_layout = QHBoxLayout()
+    x_min_label = QLabel("x Range:")
+    x_min_input = QLineEdit()
+    x_max_label = QLabel("-   ")
+    x_max_input = QLineEdit()
+
+    x_min_input.setFixedWidth(50)
+    x_max_input.setFixedWidth(50)
+
+    # Add spacing between the labels and inputs
+    x_layout.addWidget(x_min_label)
+    x_layout.addWidget(x_min_input)
+    x_layout.addSpacing(10) # Reduced spacing between scale and shift
+    x_layout.addWidget(x_max_label)
+    x_layout.addWidget(x_max_input)
+    x_layout.addStretch()  # Push everything to the left
+
+    # Align elements in the row
+    x_layout.setAlignment(Qt.AlignLeft)
+    settings_layout.addLayout(x_layout)
+
+    ########### Y-Axis Settings ###########
+    settings_layout.addLayout(create_section_title_with_line("Y-Axis"))
 
     # Keep track of all axis rows
     axis_title_inputs = []
@@ -708,34 +687,11 @@ def interactive_plot_type_selection_QT():
 
     # Add the initial axis row
     add_axis_row()
-    ########### Add the 5th horizontal line separator ###########
-    settings_layout.addWidget(create_horizontal_line())
 
-    # Add input fields for "x min" and "x max" in the same row
-    x_layout = QHBoxLayout()
-    x_min_label = QLabel("x min:")
-    x_min_input = QLineEdit()
-    x_max_label = QLabel("x max:")
-    x_max_input = QLineEdit()
+    ########### File Selection ###########
+    file_selection_layout = create_section_title_with_line("File Selection")
+    settings_layout.addLayout(file_selection_layout)
 
-    x_min_input.setFixedWidth(60)
-    x_max_input.setFixedWidth(60)
-
-    # Add spacing between the labels and inputs
-    x_layout.addWidget(x_min_label)
-    x_layout.addWidget(x_min_input)
-    x_layout.addSpacing(10) # Reduced spacing between scale and shift
-    x_layout.addWidget(x_max_label)
-    x_layout.addWidget(x_max_input)
-    x_layout.addStretch()  # Push everything to the left
-
-    # Align elements in the row
-    x_layout.setAlignment(Qt.AlignLeft)
-    settings_layout.addLayout(x_layout)
-
-    ########### Add the 6th horizontal line separator ###########
-    settings_layout.addWidget(create_horizontal_line())
-  
     # Integrate FileSelectorApp (Browse button functionality)
     file_selector = FileSelectorApp()
     file_selector.files_updated.connect(update_file_paths)
