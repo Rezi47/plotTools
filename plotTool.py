@@ -345,6 +345,13 @@ def interactive_plot_type_selection_QT():
 
     def add_axis_row():
         axis_row_layout = QHBoxLayout()
+
+        # Create a counter label for the variable number
+        variable_number = len(axis_title_inputs) + 1  # Determine the current row number
+        variable_label = QLabel(f"Variable {variable_number}:")
+        variable_label.setFixedWidth(80)  # Set a fixed width for alignment
+
+        # Create the title and dimension labels and inputs
         axis_title_label = QLabel("Title:")
         axis_title_input = QLineEdit()
         axis_dim_label = QLabel("Dimension:")
@@ -355,6 +362,7 @@ def interactive_plot_type_selection_QT():
         axis_dim_input.setFixedWidth(70)
 
         # Add widgets to the horizontal layout
+        axis_row_layout.addWidget(variable_label)  # Add the variable label
         axis_row_layout.addWidget(axis_title_label)
         axis_row_layout.addWidget(axis_title_input)
         axis_row_layout.addSpacing(10)
@@ -565,6 +573,7 @@ def interactive_plot_type_selection_QT():
 
     # Add the initial axis row
     add_axis_row()
+    
     axis_title_inputs[0].setToolTip("Enter the title for the y-axis.")  # Add hover explanation
     axis_dim_inputs[0].setToolTip("Enter the dimension for the y-axis.")  # Add hover explanation
 
