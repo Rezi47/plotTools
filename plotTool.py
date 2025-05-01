@@ -359,7 +359,7 @@ def interactive_plot_type_selection_QT():
 
         # Set fixed width for input fields
         axis_title_input.setFixedWidth(140)
-        axis_dim_input.setFixedWidth(70)
+        axis_dim_input.setFixedWidth(50)
 
         # Add widgets to the horizontal layout
         axis_row_layout.addWidget(variable_label)  # Add the variable label
@@ -504,7 +504,7 @@ def interactive_plot_type_selection_QT():
     # Add spacing between the labels and inputs
     x_layout.addWidget(range_label)
     x_layout.addWidget(x_min_input)
-    x_layout.addSpacing(10) # Reduced spacing between scale and shift
+    x_layout.addSpacing(10)
     x_layout.addWidget(seperator)
     x_layout.addWidget(x_max_input)
     x_layout.addStretch()  # Push everything to the left
@@ -524,7 +524,7 @@ def interactive_plot_type_selection_QT():
 
     # Set fixed width for input fields
     x_axis_title_input.setFixedWidth(140)
-    x_axis_dim_input.setFixedWidth(70)
+    x_axis_dim_input.setFixedWidth(50)
 
     # Add widgets to the horizontal layout
     x_axis_layout.addWidget(x_axis_title_label)
