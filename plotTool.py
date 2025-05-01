@@ -190,6 +190,8 @@ def interactive_plot_type_selection_QT():
     plot_type = None
     x_min = None
     x_max = None
+    y_min = None
+    y_max = None
     fig_title = None
     x_axis_title = None
     x_axis_dim = None
@@ -205,7 +207,7 @@ def interactive_plot_type_selection_QT():
     fig_height = None
     
     def update_values():
-        nonlocal plot_type, x_min, x_max, scale, shift, norm_origin, fig_title, x_axis_title, x_axis_dim, axis_title, axis_dim, skip_row, usecols, fig_width, fig_height
+        nonlocal plot_type, x_min, x_max, y_min, y_max, scale, shift, norm_origin, fig_title, x_axis_title, x_axis_dim, axis_title, axis_dim, skip_row, usecols, fig_width, fig_height
 
         axis_title = []
         axis_dim = []
@@ -234,7 +236,10 @@ def interactive_plot_type_selection_QT():
         x_min = float(x_min_input.text()) if x_min_input.text() else None
         x_max = float(x_max_input.text()) if x_max_input.text() else None
 
-                # Get user-defined figure dimensions
+        y_min = float(y_min_input.text()) if y_min_input.text() else None
+        y_max = float(y_max_input.text()) if y_max_input.text() else None
+
+        # Get user-defined figure dimensions
         fig_width = float(fig_width_input.text()) if fig_width_input.text() else 4
         fig_height = float(fig_height_input.text()) if fig_height_input.text() else 4
 
@@ -270,6 +275,8 @@ def interactive_plot_type_selection_QT():
             [file["label"] for file in files],
             x_min,
             x_max,
+            y_min,
+            y_max,
             fig_title,
             axis_title,
             axis_dim,
@@ -472,6 +479,28 @@ def interactive_plot_type_selection_QT():
     ########### X-Axis Settings ###########
     settings_layout.addLayout(create_section_title_with_line("X-Axis"))
 
+   # Add input fields for "x min" and "x max" in the same row
+    x_layout = QHBoxLayout()
+    range_label = QLabel("x Range:")
+    x_min_input = QLineEdit()
+    seperator = QLabel("-   ")
+    x_max_input = QLineEdit()
+
+    x_min_input.setFixedWidth(50)
+    x_max_input.setFixedWidth(50)
+
+    # Add spacing between the labels and inputs
+    x_layout.addWidget(range_label)
+    x_layout.addWidget(x_min_input)
+    x_layout.addSpacing(10) # Reduced spacing between scale and shift
+    x_layout.addWidget(seperator)
+    x_layout.addWidget(x_max_input)
+    x_layout.addStretch()  # Push everything to the left
+
+    # Align elements in the row
+    x_layout.setAlignment(Qt.AlignLeft)
+    settings_layout.addLayout(x_layout)
+
     # Add input fields for "X-Axis Title" and "X-Axis Dimension"
     x_axis_layout = QHBoxLayout()
     x_axis_title_label = QLabel("Title:")
@@ -494,30 +523,30 @@ def interactive_plot_type_selection_QT():
     # Add the layout to the settings panel
     settings_layout.addLayout(x_axis_layout)
 
-    # Add input fields for "x min" and "x max" in the same row
-    x_layout = QHBoxLayout()
-    range_label = QLabel("x Range:")
-    x_min_input = QLineEdit()
-    seperator = QLabel("-   ")
-    x_max_input = QLineEdit()
-
-    x_min_input.setFixedWidth(50)
-    x_max_input.setFixedWidth(50)
-
-    # Add spacing between the labels and inputs
-    x_layout.addWidget(range_label)
-    x_layout.addWidget(x_min_input)
-    x_layout.addSpacing(10) # Reduced spacing between scale and shift
-    x_layout.addWidget(seperator)
-    x_layout.addWidget(x_max_input)
-    x_layout.addStretch()  # Push everything to the left
-
-    # Align elements in the row
-    x_layout.setAlignment(Qt.AlignLeft)
-    settings_layout.addLayout(x_layout)
-
     ########### Y-Axis Settings ###########
     settings_layout.addLayout(create_section_title_with_line("Y-Axis"))
+
+    # Add input fields for "y min" and "y max" in the same row
+    y_layout = QHBoxLayout()
+    y_range_label = QLabel("y Range:")
+    y_min_input = QLineEdit()
+    y_separator = QLabel("-   ")
+    y_max_input = QLineEdit()
+
+    y_min_input.setFixedWidth(50)
+    y_max_input.setFixedWidth(50)
+
+    # Add spacing between the labels and inputs
+    y_layout.addWidget(y_range_label)
+    y_layout.addWidget(y_min_input)
+    y_layout.addSpacing(10)
+    y_layout.addWidget(y_separator)
+    y_layout.addWidget(y_max_input)
+    y_layout.addStretch()  # Push everything to the left
+
+    # Align elements in the row
+    y_layout.setAlignment(Qt.AlignLeft)
+    settings_layout.addLayout(y_layout)
 
     # Keep track of all axis rows
     axis_title_inputs = []
@@ -615,7 +644,7 @@ class PlotCanvas(FigureCanvas):
         self.mpl_connect("motion_notify_event", self.on_motion)
         self.mpl_connect("button_release_event", self.on_release)
 
-    def plot(self, parsed_data, labels, x_min, x_max, fig_title, axis_title, axis_dim, fig_width=4, fig_height=4, x_axis_title=None, x_axis_dim=None):
+    def plot(self, parsed_data, labels, x_min, x_max, y_min, y_max, fig_title, axis_title, axis_dim, fig_width=4, fig_height=4, x_axis_title=None, x_axis_dim=None):
         self.fig.clear()  # Clear the main figure for new plots
         colors = ['b', 'r', 'g', 'c', 'm', 'y']
         linestyles = ['-', '--', ':', '-.']
@@ -657,6 +686,10 @@ class PlotCanvas(FigureCanvas):
                 left=x_min if x_min is not None else self.axs[i].get_xlim()[0],
                 right=x_max if x_max is not None else self.axs[i].get_xlim()[1]
             )
+            self.axs[i].set_ylim(
+            bottom=y_min if y_min is not None else self.axs[i].get_ylim()[0],
+            top=y_max if y_max is not None else self.axs[i].get_ylim()[1]
+)
             legend = self.axs[i].legend()
             legend.set_draggable(True)  # Enable draggable legends
 
@@ -986,6 +1019,8 @@ def parse_arguments():
     parser.add_argument('-y_axis_dim', '-yad', default="-", help="Specify Dimensions for the y Axes (comma-separated for multiple)")
     parser.add_argument('-x_min', '-xmi', type=float, help="Minimum x-axis value")
     parser.add_argument('-x_max', '-xma', type=float, help="Maximum x-axis value")
+    parser.add_argument('-y_min', '-ymi', type=float, help="Minimum y-axis value")
+    parser.add_argument('-y_max', '-yma', type=float, help="Maximum y-axis value")
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Enable saving the plot as a PNG image")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Enable saving the extracted data to CSV files")
     
@@ -1029,7 +1064,7 @@ def parse_arguments():
     return (
         args.plot_type, args.fig_title, args.x_axis_title, args.x_axis_dim,
         y_axis_title_list,y_axis_dim_list , args.x_min, args.x_max,
-        args.save_plot, args.save_data, files
+        args.y_min, args.y_max, args.save_plot, args.save_data, files
     )
 
 if __name__ == "__main__":
@@ -1040,7 +1075,7 @@ if __name__ == "__main__":
         plot_type, fig_title,
         x_axis_title, x_axis_dim,
         y_axis_title, y_axis_dim,
-        x_min, x_max, save_plot, save_data, files
+        x_min, x_max, y_min, y_max, save_plot, save_data, files
     ) = parse_arguments()
 
     if not plot_type or not files:
@@ -1064,6 +1099,8 @@ if __name__ == "__main__":
         print(f"Y Axis dimensions: {y_axis_dim}")
         if x_min or x_max:
             print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
+            print(f"y Range: {'default' if y_min is None else y_min} - {'default' if y_max is None else y_max}")
+
         print()
 
         parsed_data = extract_data(files, plot_type)
@@ -1081,7 +1118,7 @@ if __name__ == "__main__":
         canvas.plot(
             parsed_data,
             [file["label"] for file in files],
-            x_min, x_max, fig_title,
+            x_min, x_max, y_min, y_max, fig_title,
             y_axis_title, y_axis_dim,
             x_axis_title=x_axis_title,
             x_axis_dim=x_axis_dim
