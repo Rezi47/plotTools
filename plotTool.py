@@ -1017,10 +1017,8 @@ def parse_arguments():
     parser.add_argument('-x_axis_dim', '-xad', default="s", help="Specify a Dimension for the x Axis")
     parser.add_argument('-y_axis_title', '-yat', default="Amplitude", help="Specify Titles for the y Axes (comma-separated for multiple)")
     parser.add_argument('-y_axis_dim', '-yad', default="-", help="Specify Dimensions for the y Axes (comma-separated for multiple)")
-    parser.add_argument('-x_min', '-xmi', type=float, help="Minimum x-axis value")
-    parser.add_argument('-x_max', '-xma', type=float, help="Maximum x-axis value")
-    parser.add_argument('-y_min', '-ymi', type=float, help="Minimum y-axis value")
-    parser.add_argument('-y_max', '-yma', type=float, help="Maximum y-axis value")
+    parser.add_argument('-x_range', '-xr', type=str, help="X-axis range as 'min,max' (e.g., 5,10)")
+    parser.add_argument('-y_range', '-yr', type=str, help="Y-axis range as 'min,max' (e.g., -5,5)")
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Enable saving the plot as a PNG image")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Enable saving the extracted data to CSV files")
     
@@ -1028,6 +1026,24 @@ def parse_arguments():
 
     y_axis_title_list = args.y_axis_title.split(',')
     y_axis_dim_list = args.y_axis_dim.split(',')
+    
+    # Parse x_range
+    if args.x_range:
+        try:
+            x_min, x_max = map(float, args.x_range.split(','))
+        except ValueError:
+            sys.exit("Invalid format for x_range. Use 'min,max' (e.g., 5,10).")
+    else:
+        x_min, x_max = None, None
+
+    # Parse y_range
+    if args.y_range:
+        try:
+            y_min, y_max = map(float, args.y_range.split(','))
+        except ValueError:
+            sys.exit("Invalid format for y_range. Use 'min,max' (e.g., -5,5).")
+    else:
+        y_min, y_max = None, None
 
     files = []
     i = 0
@@ -1063,8 +1079,8 @@ def parse_arguments():
 
     return (
         args.plot_type, args.fig_title, args.x_axis_title, args.x_axis_dim,
-        y_axis_title_list,y_axis_dim_list , args.x_min, args.x_max,
-        args.y_min, args.y_max, args.save_plot, args.save_data, files
+        y_axis_title_list,y_axis_dim_list , x_min, x_max,
+        y_min, y_max, args.save_plot, args.save_data, files
     )
 
 if __name__ == "__main__":
