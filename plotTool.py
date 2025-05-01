@@ -448,7 +448,7 @@ def interactive_plot_type_selection_QT():
     fig_title_layout = QHBoxLayout()
     fig_title_label = QLabel("Figure title:")
     fig_title_input = QLineEdit()
-
+    fig_title_input.setToolTip("Enter a title for the figure.")
     fig_title_input.setFixedWidth(140)
 
     fig_title_layout.addWidget(fig_title_label)
@@ -461,8 +461,10 @@ def interactive_plot_type_selection_QT():
     fig_size_layout = QHBoxLayout()
     fig_width_label = QLabel("Figure Width:")
     fig_width_input = QLineEdit("4")  # Default width
+    fig_width_input.setToolTip("Specify the width of the figure in inches.")
     fig_height_label = QLabel("Figure Height:")
     fig_height_input = QLineEdit("4")  # Default height
+    fig_height_input.setToolTip("Specify the height of the figure in inches.")
 
     fig_width_input.setFixedWidth(60)
     fig_height_input.setFixedWidth(60)
@@ -483,8 +485,10 @@ def interactive_plot_type_selection_QT():
     x_layout = QHBoxLayout()
     range_label = QLabel("x Range:")
     x_min_input = QLineEdit()
+    x_min_input.setToolTip("Enter the minimum value for the x-axis range.")
     seperator = QLabel("-   ")
     x_max_input = QLineEdit()
+    x_max_input.setToolTip("Enter the maximum value for the x-axis range.")
 
     x_min_input.setFixedWidth(50)
     x_max_input.setFixedWidth(50)
@@ -505,8 +509,10 @@ def interactive_plot_type_selection_QT():
     x_axis_layout = QHBoxLayout()
     x_axis_title_label = QLabel("Title:")
     x_axis_title_input = QLineEdit()
+    x_axis_title_input.setToolTip("Enter the title for the x-axis.")
     x_axis_dim_label = QLabel("Dimension:")
     x_axis_dim_input = QLineEdit()
+    x_axis_dim_input.setToolTip("Enter the dimension for the x-axis.")
 
     # Set fixed width for input fields
     x_axis_title_input.setFixedWidth(140)
@@ -530,9 +536,10 @@ def interactive_plot_type_selection_QT():
     y_layout = QHBoxLayout()
     y_range_label = QLabel("y Range:")
     y_min_input = QLineEdit()
+    y_min_input.setToolTip("Enter the minimum value for the y-axis range.")
     y_separator = QLabel("-   ")
     y_max_input = QLineEdit()
-
+    y_max_input.setToolTip("Enter the maximum value for the y-axis range.")
     y_min_input.setFixedWidth(50)
     y_max_input.setFixedWidth(50)
 
@@ -558,6 +565,8 @@ def interactive_plot_type_selection_QT():
 
     # Add the initial axis row
     add_axis_row()
+    axis_title_inputs[0].setToolTip("Enter the title for the y-axis.")  # Add hover explanation
+    axis_dim_inputs[0].setToolTip("Enter the dimension for the y-axis.")  # Add hover explanation
 
     ########### File Selection ###########
     settings_layout.addLayout(create_section_title_with_line("File Selection"))
@@ -571,10 +580,12 @@ def interactive_plot_type_selection_QT():
     button_layout = QHBoxLayout()
     
     plot_button = QPushButton("👁️ Plot")
+    plot_button.setToolTip("Click to generate the plot.")
     plot_button.clicked.connect(plot_button_clicked)
     plot_button.setFixedSize(120, 40)
     
     write_plot_button = QPushButton("💾 Save Plot")
+    write_plot_button.setToolTip("Click to save the generated plot as an image.")
     write_plot_button.setEnabled(False)
     write_plot_button.setStyleSheet("""
         font-size: 15px;
@@ -588,6 +599,7 @@ def interactive_plot_type_selection_QT():
     write_plot_button.setFixedSize(120, 40)
     
     write_data_button = QPushButton("📊 Save Data")
+    write_data_button.setToolTip("Click to save the extracted data to a file.")
     write_data_button.clicked.connect(write_data_button_clicked)
     write_data_button.setFixedSize(120, 40)
     
@@ -802,9 +814,11 @@ class FileSelectorApp(QWidget):
 
         browse_button = QPushButton("📂")
         browse_button.setFixedSize(30, 30)
+        browse_button.setToolTip("Click to browse and select a file.")
 
         file_path_box = QLineEdit()
         file_path_box.setReadOnly(True)
+        file_path_box.setToolTip("Displays the selected file path.")
         file_path_box.setProperty("settings", {
             "scale": 1,
             "shift": 0,
@@ -817,12 +831,15 @@ class FileSelectorApp(QWidget):
 
         label_input = QLineEdit()
         label_input.setPlaceholderText("Enter label")
+        label_input.setToolTip("Enter a label for the selected file.")
 
         settings_button = QPushButton("⚙️ Settings")
         settings_button.setFixedSize(80, 30)
+        settings_button.setToolTip("Click to configure file-specific settings.")
 
         close_button = QPushButton("❌")  # Add a close button
         close_button.setFixedSize(20, 20)
+        close_button.setToolTip("Click to remove this file row.")
         close_button.setStyleSheet("""
         QPushButton {
             background-color: transparent;  /* No background */
@@ -951,6 +968,8 @@ class SettingsDialog(QDialog):
         scale_layout = QHBoxLayout()
         scale_label = QLabel("Scale:")
         self.scale_input = QLineEdit(str(self.scale))
+        self.scale_input.setPlaceholderText("e.g., 1.0")  # Add placeholder text
+        self.scale_input.setToolTip("Specify the scale factor to divide the data (e.g., 1.0 for no scaling).")
         scale_layout.addWidget(scale_label)
         scale_layout.addWidget(self.scale_input)
         layout.addLayout(scale_layout)
@@ -959,6 +978,8 @@ class SettingsDialog(QDialog):
         shift_layout = QHBoxLayout()
         shift_label = QLabel("Shift:")
         self.shift_input = QLineEdit(str(self.shift))
+        self.shift_input.setPlaceholderText("e.g., 0.0")  # Add placeholder text
+        self.shift_input.setToolTip("Specify the shift value to add to the data (e.g., 0.0 for no shift).")
         shift_layout.addWidget(shift_label)
         shift_layout.addWidget(self.shift_input)
         layout.addLayout(shift_layout)
@@ -967,6 +988,8 @@ class SettingsDialog(QDialog):
         skip_row_layout = QHBoxLayout()
         skip_row_label = QLabel("Skip Rows:")
         self.skip_row_input = QLineEdit(str(self.skip_row))
+        self.skip_row_input.setPlaceholderText("e.g., 0")  # Add placeholder text
+        self.skip_row_input.setToolTip("Specify the number of rows to skip at the start of the file (e.g., 0 for no skipping).")
         skip_row_layout.addWidget(skip_row_label)
         skip_row_layout.addWidget(self.skip_row_input)
         layout.addLayout(skip_row_layout)
@@ -975,6 +998,8 @@ class SettingsDialog(QDialog):
         usecols_layout = QHBoxLayout()
         usecols_label = QLabel("Used Columns:")
         self.usecols_input = QLineEdit(self.usecols)
+        self.usecols_input.setPlaceholderText("e.g., 0,1,3")
+        self.usecols_input.setToolTip("Specify the column indices to use, separated by commas (e.g., 0,1,3).")
         usecols_layout.addWidget(usecols_label)
         usecols_layout.addWidget(self.usecols_input)
         layout.addLayout(usecols_layout)
@@ -983,6 +1008,7 @@ class SettingsDialog(QDialog):
         normalize_layout = QHBoxLayout()
         self.normalize_checkbox = QCheckBox("Normalize")
         self.normalize_checkbox.setChecked(self.normalize)
+        self.normalize_checkbox.setToolTip("Enable this option to normalize the data to its origin (subtract the mean of the data).")
         normalize_layout.addWidget(self.normalize_checkbox)
         layout.addLayout(normalize_layout)
 
