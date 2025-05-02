@@ -186,28 +186,16 @@ def save_data_func(parsed_data, labels, fig_title, x_axis_title, axis_title):
         print(f"Saved Variable {var_idx+1} data in: {file_path}")
     return saved_paths
         
-def interactive_plot_type_selection_QT():
-    plot_type = None
-    x_min = None
-    x_max = None
-    y_min = None
-    y_max = None
-    fig_title = None
-    x_axis_title = None
-    x_axis_dim = None
-    axis_title = []
-    axis_dim = []
-    files = []
-    scale = []
-    shift = []
-    skip_row = []
-    usecols = []
-    norm_origin = False
+def interactive_plot_type_selection_QT(
+    plot_type, fig_title, x_axis_title, x_axis_dim,
+    axis_title, axis_dim, x_min, x_max,
+    y_min, y_max, files
+):
     fig_width = None
     fig_height = None
-    
+
     def update_values():
-        nonlocal plot_type, x_min, x_max, y_min, y_max, scale, shift, norm_origin, fig_title, x_axis_title, x_axis_dim, axis_title, axis_dim, skip_row, usecols, fig_width, fig_height
+        nonlocal plot_type, x_min, x_max, y_min, y_max, fig_title, x_axis_title, x_axis_dim, axis_title, axis_dim, fig_width, fig_height
 
         axis_title = []
         axis_dim = []
@@ -250,10 +238,6 @@ def interactive_plot_type_selection_QT():
     def set_plot_type(plot_value):
         nonlocal plot_type
         plot_type = plot_value
-        axis_title_inputs[0].setText(fig_config[plot_type]['def_axis_title'])
-        axis_dim_inputs[0].setText(fig_config[plot_type]['def_dimension'])
-        x_axis_title_input.setText("t")
-        x_axis_dim_input.setText("s")
 
         update_values()  # Capture the latest values when plot type is selected
 
@@ -373,6 +357,9 @@ def interactive_plot_type_selection_QT():
         # Add the new row to the container layout
         axis_container_layout.addLayout(axis_row_layout)
 
+        axis_title_input.setToolTip("Enter the title for the y-axis.")
+        axis_dim_input.setToolTip("Enter the dimension for the y-axis.")
+
         # Keep track of the row
         axis_title_inputs.append(axis_title_input)
         axis_dim_inputs.append(axis_dim_input)
@@ -447,15 +434,15 @@ def interactive_plot_type_selection_QT():
         button.clicked.connect(lambda checked, pv=plot_value: set_plot_type(pv))
         settings_layout.addWidget(button)
 
-    # Auto-click the "general" button
-    QTimer.singleShot(100, plot_buttons["general"].click)
+    # Auto-click the plot button
+    QTimer.singleShot(100, plot_buttons[plot_type].click)
 
     ########### Figure Properties ###########
     settings_layout.addLayout(create_section_title_with_line("Figure Properties"))
 
     fig_title_layout = QHBoxLayout()
     fig_title_label = QLabel("Figure title:")
-    fig_title_input = QLineEdit()
+    fig_title_input = QLineEdit(fig_title)
     fig_title_input.setToolTip("Enter a title for the figure.")
     fig_title_input.setFixedWidth(140)
 
@@ -492,10 +479,10 @@ def interactive_plot_type_selection_QT():
    # Add input fields for "x min" and "x max" in the same row
     x_layout = QHBoxLayout()
     range_label = QLabel("x Range:")
-    x_min_input = QLineEdit()
+    x_min_input = QLineEdit(str(x_min) if x_min is not None else "")
     x_min_input.setToolTip("Enter the minimum value for the x-axis range.")
     seperator = QLabel("-   ")
-    x_max_input = QLineEdit()
+    x_max_input = QLineEdit(str(x_max) if x_max is not None else "")
     x_max_input.setToolTip("Enter the maximum value for the x-axis range.")
 
     x_min_input.setFixedWidth(50)
@@ -516,10 +503,10 @@ def interactive_plot_type_selection_QT():
     # Add input fields for "X-Axis Title" and "X-Axis Dimension"
     x_axis_layout = QHBoxLayout()
     x_axis_title_label = QLabel("Title:")
-    x_axis_title_input = QLineEdit()
+    x_axis_title_input = QLineEdit(x_axis_title)
     x_axis_title_input.setToolTip("Enter the title for the x-axis.")
     x_axis_dim_label = QLabel("Dimension:")
-    x_axis_dim_input = QLineEdit()
+    x_axis_dim_input = QLineEdit(x_axis_dim)
     x_axis_dim_input.setToolTip("Enter the dimension for the x-axis.")
 
     # Set fixed width for input fields
@@ -543,10 +530,10 @@ def interactive_plot_type_selection_QT():
     # Add input fields for "y min" and "y max" in the same row
     y_layout = QHBoxLayout()
     y_range_label = QLabel("y Range:")
-    y_min_input = QLineEdit()
+    y_min_input = QLineEdit(str(y_min) if y_min is not None else "")
     y_min_input.setToolTip("Enter the minimum value for the y-axis range.")
     y_separator = QLabel("-   ")
-    y_max_input = QLineEdit()
+    y_max_input = QLineEdit(str(y_max) if y_max is not None else "")
     y_max_input.setToolTip("Enter the maximum value for the y-axis range.")
     y_min_input.setFixedWidth(50)
     y_max_input.setFixedWidth(50)
@@ -571,11 +558,19 @@ def interactive_plot_type_selection_QT():
     axis_container_layout = QVBoxLayout()
     settings_layout.addLayout(axis_container_layout)  # Add the container to the main settings layout
 
-    # Add the initial axis row
+    # Determine the maximum length between axis_title and axis_dim
+    max_length = max(len(axis_title), len(axis_dim))
+
     add_axis_row()
-    
-    axis_title_inputs[0].setToolTip("Enter the title for the y-axis.")  # Add hover explanation
-    axis_dim_inputs[0].setToolTip("Enter the dimension for the y-axis.")  # Add hover explanation
+
+    # Set the text for each row based on the values in axis_title and axis_dim
+    for i in range(max_length):
+        
+        title = axis_title[i] if i < len(axis_title) else "Amplitude"
+        dim = axis_dim[i] if i < len(axis_dim) else "-"
+
+        axis_title_inputs[i].setText(title)
+        axis_dim_inputs[i].setText(dim)
 
     ########### File Selection ###########
     settings_layout.addLayout(create_section_title_with_line("File Selection"))
@@ -1052,33 +1047,17 @@ def parse_arguments():
     parser.add_argument('-x_axis_dim', '-xad', default="s", help="Specify a Dimension for the x Axis")
     parser.add_argument('-y_axis_title', '-yat', default="Amplitude", help="Specify Titles for the y Axes (comma-separated for multiple)")
     parser.add_argument('-y_axis_dim', '-yad', default="-", help="Specify Dimensions for the y Axes (comma-separated for multiple)")
-    parser.add_argument('-x_range', '-xr', type=str, help="X-axis range as 'min,max' (e.g., 5,10)")
-    parser.add_argument('-y_range', '-yr', type=str, help="Y-axis range as 'min,max' (e.g., -5,5)")
+    parser.add_argument('-x_min', '-xmi', type=float, help="Minimum x-axis value")
+    parser.add_argument('-x_max', '-xma', type=float, help="Maximum x-axis value")
+    parser.add_argument('-y_min', '-ymi', type=float, help="Minimum y-axis value")
+    parser.add_argument('-y_max', '-yma', type=float, help="Maximum y-axis value")
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Enable saving the plot as a PNG image")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Enable saving the extracted data to CSV files")
     
     args = parser.parse_args()
 
     y_axis_title_list = args.y_axis_title.split(',')
-    y_axis_dim_list = args.y_axis_dim.split(',')
-    
-    # Parse x_range
-    if args.x_range:
-        try:
-            x_min, x_max = map(float, args.x_range.split(','))
-        except ValueError:
-            sys.exit("Invalid format for x_range. Use 'min,max' (e.g., 5,10).")
-    else:
-        x_min, x_max = None, None
-
-    # Parse y_range
-    if args.y_range:
-        try:
-            y_min, y_max = map(float, args.y_range.split(','))
-        except ValueError:
-            sys.exit("Invalid format for y_range. Use 'min,max' (e.g., -5,5).")
-    else:
-        y_min, y_max = None, None
+    y_axis_dim_list = args.y_axis_dim.split(',')   
 
     files = []
     i = 0
@@ -1111,11 +1090,10 @@ def parse_arguments():
             "skip_row": skip_row,
             "usecols": usecols
         })
-
     return (
         args.plot_type, args.fig_title, args.x_axis_title, args.x_axis_dim,
-        y_axis_title_list,y_axis_dim_list , x_min, x_max,
-        y_min, y_max, args.save_plot, args.save_data, files
+        y_axis_title_list,y_axis_dim_list , args.x_min, args.x_max,
+        args.y_min, args.y_max, args.save_plot, args.save_data, files
     )
 
 if __name__ == "__main__":
@@ -1129,60 +1107,64 @@ if __name__ == "__main__":
         x_min, x_max, y_min, y_max, save_plot, save_data, files
     ) = parse_arguments()
 
-    if not plot_type or not files:
-        interactive_plot_type_selection_QT()
-    else:
-        for file in files:
-            print("File:", os.path.relpath(file["path"]))
-            print("Label:", file["label"])
-            print(f"Scale value: {file['scale']}") if file["scale"] != 1 else None
-            print(f"Shift value: {file['shift']}") if file["shift"] != 0 else None
-            print(f"Normalized to the origin") if file["norm_origin"] else None
-            print(f"Skipped rows: {file['skip_row']}") if file["skip_row"] else None
-            print(f"Used columns: {file['usecols']}") if file["usecols"] else None
-            print()
-        
-        print(f"Plot type: {plot_type}")
-        print(f"Figure title: {fig_title}") if fig_title else None
-        print(f"X Axis title: {x_axis_title}")
-        print(f"X Axis dimension: {x_axis_dim}")
-        print(f"Y Axis titles: {y_axis_title}")
-        print(f"Y Axis dimensions: {y_axis_dim}")
-        if x_min or x_max:
-            print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
-            print(f"y Range: {'default' if y_min is None else y_min} - {'default' if y_max is None else y_max}")
-
-        print()
-
-        parsed_data = extract_data(files, plot_type)
-
-        window = QMainWindow()
-        central_widget = QWidget()
-        layout = QVBoxLayout(central_widget)
-        window.setCentralWidget(central_widget)
-
-        # Add the Matplotlib canvas
-        canvas = PlotCanvas(window, width=5, height=4, dpi=100)
-        layout.addWidget(canvas)
-
-        # Plot the data
-        canvas.plot(
-            parsed_data,
-            [file["label"] for file in files],
-            x_min, x_max, y_min, y_max, fig_title,
-            y_axis_title, y_axis_dim,
-            x_axis_title=x_axis_title,
-            x_axis_dim=x_axis_dim
+    interactive_plot_type_selection_QT (
+        plot_type, fig_title,
+        x_axis_title, x_axis_dim,
+        y_axis_title, y_axis_dim,
+        x_min, x_max, y_min, y_max, files
         )
 
-        # Show the window
-        window.setWindowTitle("Plot Viewer")
-        window.resize(800, 700)
-        window.show()
-        app.exec_()
+    # for file in files:
+    #     print("File:", os.path.relpath(file["path"]))
+    #     print("Label:", file["label"])
+    #     print(f"Scale value: {file['scale']}") if file["scale"] != 1 else None
+    #     print(f"Shift value: {file['shift']}") if file["shift"] != 0 else None
+    #     print(f"Normalized to the origin") if file["norm_origin"] else None
+    #     print(f"Skipped rows: {file['skip_row']}") if file["skip_row"] else None
+    #     print(f"Used columns: {file['usecols']}") if file["usecols"] else None
+    #     print()
+    
+    # print(f"Plot type: {plot_type}")
+    # print(f"Figure title: {fig_title}") if fig_title else None
+    # print(f"X Axis title: {x_axis_title}")
+    # print(f"X Axis dimension: {x_axis_dim}")
+    # print(f"Y Axis titles: {y_axis_title}")
+    # print(f"Y Axis dimensions: {y_axis_dim}")
+    # if x_min or x_max:
+    #     print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
+    #     print(f"y Range: {'default' if y_min is None else y_min} - {'default' if y_max is None else y_max}")
 
-        # Save the plot and data if required
-        if save_plot:
-            save_plot_func(canvas.fig, canvas.individual_figures, y_axis_title, fig_title)
-        if save_data:
-            save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, y_axis_title)
+    # print()
+
+    # parsed_data = extract_data(files, plot_type)
+
+    # window = QMainWindow()
+    # central_widget = QWidget()
+    # layout = QVBoxLayout(central_widget)
+    # window.setCentralWidget(central_widget)
+
+    # # Add the Matplotlib canvas
+    # canvas = PlotCanvas(window, width=5, height=4, dpi=100)
+    # layout.addWidget(canvas)
+
+    # # Plot the data
+    # canvas.plot(
+    #     parsed_data,
+    #     [file["label"] for file in files],
+    #     x_min, x_max, y_min, y_max, fig_title,
+    #     y_axis_title, y_axis_dim,
+    #     x_axis_title=x_axis_title,
+    #     x_axis_dim=x_axis_dim
+    # )
+
+    # # Show the window
+    # window.setWindowTitle("Plot Viewer")
+    # window.resize(800, 700)
+    # window.show()
+    # app.exec_()
+
+    # # Save the plot and data if required
+    # if save_plot:
+    #     save_plot_func(canvas.fig, canvas.individual_figures, y_axis_title, fig_title)
+    # if save_data:
+    #     save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, y_axis_title)
