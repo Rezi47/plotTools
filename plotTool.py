@@ -576,7 +576,7 @@ def interactive_plot_type_selection_QT(
     settings_layout.addLayout(create_section_title_with_line("File Selection"))
 
     # Integrate FileSelectorApp (Browse button functionality)
-    file_selector = FileSelectorApp()
+    file_selector = FileSelectorApp(files)
     file_selector.files_updated.connect(update_file_paths)
     settings_layout.addWidget(file_selector)
 
@@ -643,7 +643,7 @@ def interactive_plot_type_selection_QT(
 
 class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.fig = Figure(figsize=(width, height), dpi=100)
         super().__init__(self.fig)
         self.setParent(parent)
         self.axs = []  # Store axes for dynamic plotting
@@ -787,20 +787,27 @@ class PlotCanvas(FigureCanvas):
 
 class FileSelectorApp(QWidget):
     files_updated = pyqtSignal(list)  # Emits the entire files list
-    def __init__(self):
+
+    def __init__(self, files=None):
         super().__init__()
-        self.files = []  # List to store file dictionaries
+        self.files = files if files else []  # Initialize with provided files or an empty list
         self.init_ui()
 
     def init_ui(self):
         self.setWindowTitle("File Selector")
         self.layout = QVBoxLayout()
+
+        # Populate rows with the provided files
+        for file_info in self.files:
+            self.add_file_row(file_info)
+
+        # Add an empty row for user input
         self.add_file_row()
         self.setLayout(self.layout)
 
-    def add_file_row(self):
+    def add_file_row(self, file_info=None):
         # Check if the last row is empty
-        if self.layout.count() > 0:
+        if not file_info and self.layout.count() > 0:
             last_row = self.layout.itemAt(self.layout.count() - 1)
             if isinstance(last_row, QHBoxLayout):
                 file_path_box = last_row.itemAt(1).widget()
@@ -857,6 +864,21 @@ class FileSelectorApp(QWidget):
         """)
         close_button.hide()  # Initially hide the close button
 
+        # Populate the row with file info if provided
+        if file_info:
+            file_path_box.setText(os.path.basename(file_info["path"]))
+            file_path_box.setProperty("full_path", file_info["path"])
+            label_input.setText(file_info["label"])
+            file_path_box.setProperty("settings", {
+                "scale": file_info.get("scale", 1),
+                "shift": file_info.get("shift", 0),
+                "norm_origin": file_info.get("norm_origin", False),
+                "skip_row": file_info.get("skip_row", 0),
+                "usecols": file_info.get("usecols", None),
+            })
+            close_button.show()  # Show the close button for pre-filled rows
+            close_button_spacer.hide()
+
         # Connect the settings button to open the settings dialog
         settings_button.clicked.connect(lambda: self.open_settings_dialog(file_path_box))
         label_input.textChanged.connect(lambda: self.update_values(file_path_box, label_input))
@@ -899,7 +921,6 @@ class FileSelectorApp(QWidget):
             self.add_file_row()
 
     def update_values(self, file_path_box=None, label_input=None):
-
         self.files = []
 
         for file_row in self.layout.children():
