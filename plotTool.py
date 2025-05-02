@@ -1128,7 +1128,7 @@ if __name__ == "__main__":
         x_min, x_max, y_min, y_max, save_plot, save_data, files
     ) = parse_arguments()
 
-    if save_data or save_plot:
+    if files and (save_data or save_plot) :
         for file in files:
             print("File:", os.path.relpath(file["path"]))
             print("Label:", file["label"])
@@ -1173,6 +1173,3 @@ if __name__ == "__main__":
         y_axis_title, y_axis_dim,
         x_min, x_max, y_min, y_max, files
         )
-
-
-
