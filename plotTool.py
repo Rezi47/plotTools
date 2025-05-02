@@ -187,12 +187,13 @@ def save_data_func(parsed_data, labels, fig_title, x_axis_title, axis_title):
     return saved_paths
         
 def interactive_plot_type_selection_QT(
-    plot_type, fig_title, x_axis_title, x_axis_dim,
+    plot_type, fig_title, fig_width, fig_height, x_axis_title, x_axis_dim,
     axis_title, axis_dim, x_min, x_max,
     y_min, y_max, files
 ):
-    fig_width = None
-    fig_height = None
+    """
+    Creates a GUI for selecting plot types and configuring plot settings.
+    """
 
     def update_values():
         nonlocal plot_type, x_min, x_max, y_min, y_max, fig_title, x_axis_title, x_axis_dim, axis_title, axis_dim, fig_width, fig_height
@@ -455,10 +456,10 @@ def interactive_plot_type_selection_QT(
     # Add input fields for "Figure Width" and "Figure Height"
     fig_size_layout = QHBoxLayout()
     fig_width_label = QLabel("Figure Width:")
-    fig_width_input = QLineEdit("4")  # Default width
+    fig_width_input = QLineEdit(str(fig_width))  # Default width
     fig_width_input.setToolTip("Specify the width of the figure in inches.")
     fig_height_label = QLabel("Figure Height:")
-    fig_height_input = QLineEdit("4")  # Default height
+    fig_height_input = QLineEdit(str(fig_height))  # Default height
     fig_height_input.setToolTip("Specify the height of the figure in inches.")
 
     fig_width_input.setFixedWidth(60)
@@ -660,7 +661,7 @@ class PlotCanvas(FigureCanvas):
         self.mpl_connect("motion_notify_event", self.on_motion)
         self.mpl_connect("button_release_event", self.on_release)
 
-    def plot(self, parsed_data, labels, x_min, x_max, y_min, y_max, fig_title, axis_title, axis_dim, fig_width=4, fig_height=4, x_axis_title=None, x_axis_dim=None):
+    def plot(self, parsed_data, labels, x_min, x_max, y_min, y_max, fig_title, axis_title, axis_dim, fig_width, fig_height, x_axis_title=None, x_axis_dim=None):
         self.fig.clear()  # Clear the main figure for new plots
         colors = ['b', 'r', 'g', 'c', 'm', 'y']
         linestyles = ['-', '--', ':', '-.']
@@ -1064,6 +1065,8 @@ def parse_arguments():
                         help="List of input files followed by their options: -label, -scale, -shift, -norm_origin, -skip_row, -usecols")
     parser.add_argument('-plot_type', '-pt', default="general", help=f"Specify the Type of plot: {', '.join(fig_config.keys())}")
     parser.add_argument('-fig_title', '-ft', default=None, help="Specify a Title for the figure")
+    parser.add_argument('-fig_width', '-fw', type=float, default=5, help="Specify the width of the figure in inches")
+    parser.add_argument('-fig_height', '-fh', type=float, default=4, help="Specify the height of the figure in inches")
     parser.add_argument('-x_axis_title', '-xat', default="t", help="Specify a Title for the x Axis")
     parser.add_argument('-x_axis_dim', '-xad', default="s", help="Specify a Dimension for the x Axis")
     parser.add_argument('-y_axis_title', '-yat', default="Amplitude", help="Specify Titles for the y Axes (comma-separated for multiple)")
@@ -1074,7 +1077,6 @@ def parse_arguments():
     parser.add_argument('-y_max', '-yma', type=float, help="Maximum y-axis value")
     parser.add_argument('-save_plot', '-sp', action='store_true', help="Enable saving the plot as a PNG image")
     parser.add_argument('-save_data', '-sd', action='store_true', help="Enable saving the extracted data to CSV files")
-    
     args = parser.parse_args()
 
     y_axis_title_list = args.y_axis_title.split(',')
@@ -1111,8 +1113,9 @@ def parse_arguments():
             "skip_row": skip_row,
             "usecols": usecols
         })
+    
     return (
-        args.plot_type, args.fig_title, args.x_axis_title, args.x_axis_dim,
+        args.plot_type, args.fig_title, args.fig_width, args.fig_height, args.x_axis_title, args.x_axis_dim,
         y_axis_title_list,y_axis_dim_list , args.x_min, args.x_max,
         args.y_min, args.y_max, args.save_plot, args.save_data, files
     )
@@ -1122,7 +1125,7 @@ if __name__ == "__main__":
     app = QApplication.instance() or QApplication(sys.argv)
 
     (
-        plot_type, fig_title,
+        plot_type, fig_title,fig_width, fig_height,
         x_axis_title, x_axis_dim,
         y_axis_title, y_axis_dim,
         x_min, x_max, y_min, y_max, save_plot, save_data, files
@@ -1157,7 +1160,7 @@ if __name__ == "__main__":
             canvas.plot(
             parsed_data,
             [file["label"] for file in files],
-            x_min, x_max, y_min, y_max, fig_title,
+            x_min, x_max, y_min, y_max, fig_title, fig_width, fig_height,
             y_axis_title, y_axis_dim,
             x_axis_title=x_axis_title,
             x_axis_dim=x_axis_dim
@@ -1168,7 +1171,7 @@ if __name__ == "__main__":
 
     else:
         interactive_plot_type_selection_QT (
-        plot_type, fig_title,
+        plot_type, fig_title,fig_width, fig_height,
         x_axis_title, x_axis_dim,
         y_axis_title, y_axis_dim,
         x_min, x_max, y_min, y_max, files
