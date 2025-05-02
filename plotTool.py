@@ -1128,64 +1128,51 @@ if __name__ == "__main__":
         x_min, x_max, y_min, y_max, save_plot, save_data, files
     ) = parse_arguments()
 
-    interactive_plot_type_selection_QT (
+    if save_data or save_plot:
+        for file in files:
+            print("File:", os.path.relpath(file["path"]))
+            print("Label:", file["label"])
+            print(f"Scale value: {file['scale']}") if file["scale"] != 1 else None
+            print(f"Shift value: {file['shift']}") if file["shift"] != 0 else None
+            print(f"Normalized to the origin") if file["norm_origin"] else None
+            print(f"Skipped rows: {file['skip_row']}") if file["skip_row"] else None
+            print(f"Used columns: {file['usecols']}") if file["usecols"] else None
+            print()
+        
+        print(f"Plot type: {plot_type}")
+        print(f"Figure title: {fig_title}") if fig_title else None
+        print(f"X Axis title: {x_axis_title}")
+        print(f"X Axis dimension: {x_axis_dim}")
+        print(f"Y Axis titles: {y_axis_title}")
+        print(f"Y Axis dimensions: {y_axis_dim}")
+        if x_min or x_max:
+            print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
+            print(f"y Range: {'default' if y_min is None else y_min} - {'default' if y_max is None else y_max}")
+        print()
+
+        parsed_data = extract_data(files, plot_type)
+
+        if save_plot:
+            canvas = PlotCanvas(None, width=5, height=4, dpi=100)
+            canvas.plot(
+            parsed_data,
+            [file["label"] for file in files],
+            x_min, x_max, y_min, y_max, fig_title,
+            y_axis_title, y_axis_dim,
+            x_axis_title=x_axis_title,
+            x_axis_dim=x_axis_dim
+        )
+            save_plot_func(canvas.fig, canvas.individual_figures, y_axis_title, fig_title)
+        if save_data:
+            save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, y_axis_title)
+
+    else:
+        interactive_plot_type_selection_QT (
         plot_type, fig_title,
         x_axis_title, x_axis_dim,
         y_axis_title, y_axis_dim,
         x_min, x_max, y_min, y_max, files
         )
 
-    # for file in files:
-    #     print("File:", os.path.relpath(file["path"]))
-    #     print("Label:", file["label"])
-    #     print(f"Scale value: {file['scale']}") if file["scale"] != 1 else None
-    #     print(f"Shift value: {file['shift']}") if file["shift"] != 0 else None
-    #     print(f"Normalized to the origin") if file["norm_origin"] else None
-    #     print(f"Skipped rows: {file['skip_row']}") if file["skip_row"] else None
-    #     print(f"Used columns: {file['usecols']}") if file["usecols"] else None
-    #     print()
-    
-    # print(f"Plot type: {plot_type}")
-    # print(f"Figure title: {fig_title}") if fig_title else None
-    # print(f"X Axis title: {x_axis_title}")
-    # print(f"X Axis dimension: {x_axis_dim}")
-    # print(f"Y Axis titles: {y_axis_title}")
-    # print(f"Y Axis dimensions: {y_axis_dim}")
-    # if x_min or x_max:
-    #     print(f"x Range: {'default' if x_min is None else x_min} - {'default' if x_max is None else x_max}")
-    #     print(f"y Range: {'default' if y_min is None else y_min} - {'default' if y_max is None else y_max}")
 
-    # print()
 
-    # parsed_data = extract_data(files, plot_type)
-
-    # window = QMainWindow()
-    # central_widget = QWidget()
-    # layout = QVBoxLayout(central_widget)
-    # window.setCentralWidget(central_widget)
-
-    # # Add the Matplotlib canvas
-    # canvas = PlotCanvas(window, width=5, height=4, dpi=100)
-    # layout.addWidget(canvas)
-
-    # # Plot the data
-    # canvas.plot(
-    #     parsed_data,
-    #     [file["label"] for file in files],
-    #     x_min, x_max, y_min, y_max, fig_title,
-    #     y_axis_title, y_axis_dim,
-    #     x_axis_title=x_axis_title,
-    #     x_axis_dim=x_axis_dim
-    # )
-
-    # # Show the window
-    # window.setWindowTitle("Plot Viewer")
-    # window.resize(800, 700)
-    # window.show()
-    # app.exec_()
-
-    # # Save the plot and data if required
-    # if save_plot:
-    #     save_plot_func(canvas.fig, canvas.individual_figures, y_axis_title, fig_title)
-    # if save_data:
-    #     save_data_func(parsed_data, [file["label"] for file in files], fig_title, x_axis_title, y_axis_title)
