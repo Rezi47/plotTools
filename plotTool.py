@@ -640,6 +640,8 @@ def interactive_plot_type_selection_QT(
     # Show the main window
     window.adjustSize()
     window.show()
+    if files:
+        plot_button.click()
     app.exec_()
 
 class PlotCanvas(FigureCanvas):
