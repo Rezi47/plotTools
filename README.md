@@ -1,124 +1,153 @@
-# Data Plotting and Extraction Tool
+# Plot Tools
+
+**Plot Tools** 
 This Python script is designed to read, process, and visualize simulation data from various file formats. It supports extracting time-series data for multiple variables, visualizing the data with flexible plotting options, and saving the extracted data as CSV files for further analysis. It works with OpenFOAM simulation results and other structured data files.
 
 ## Features
-- Data Extraction: The script can extract data such as motion, force, flux, and interface height from specific file formats (e.g., OpenFOAM simulation results).
-- Data Visualization: It can generate dynamic plots with multiple variables and labels, offering flexibility in data presentation.
-- Data Saving: Extracted data can be saved to CSV files for further analysis.
-- Flexible Plotting: Allows for shifting and scaling of data before plotting.
-- Multi-file Support: The script can handle multiple files and generate comparative plots.
-## Supported Data Types
-- Motion: Extracts motion data such as heave, roll, surge, pitch, yaw, and sway.
-- Force: Extracts force data in x, y, and z directions.
-- Flux: Extracts flux-related data.
-- Interface Height: Extracts interface height data from gauges.
-## Dependencies
-### This script requires the following Python packages:
 
-- `matplotlib`: For plotting graphs.
-- `numpy`: For handling numerical operations and data manipulation.
-- `argparse`: For parsing command-line arguments.
-- `tkinter` or `PyQt5`: For interactive file selection.
+- **Plot Types**: Supports multiple plot types such as `general` and `motion`.
+- **File Selection**: Easily select files and configure settings like scale, shift, normalization, skipped rows, and used columns.
+- **Dynamic Plotting**: Automatically adjusts the layout based on the number of variables.
+- **Save Options**:
+  - Save plots as PNG images.
+  - Save extracted data as CSV files.
+- **Interactive GUI**: Configure plot settings, axis titles, dimensions, and ranges through an intuitive GUI.
+- **Command-Line Support**: Run the tool with command-line arguments for automated workflows.
 
-You can install the dependencies using pip:
-```bash
-pip install matplotlib numpy
-```
+---
 
-If you wish to use interactive file dialogs, you'll need either `tkinter` or `PyQt5`. `tkinter` is bundled with Python, but you can install `PyQt5` separately:
-```bash
-pip install PyQt5
-```
+## Installation
 
-### Modifying the controlDict for rigidBodyMotion Solver
-If you are using the `rigidBodyMotion` solver and want to enable plot motion features in the code, you need to add the following code to your `controlDict` file:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/plot-tools.git
+   cd plot-tools
+   ```
 
-```bash
-DebugSwitches
-{
-    rigidBodyModel 1;
-}
-```
-This enables the rigid body motion model to save motion data in the log file.
+2. Install the required dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Run the tool:
+   ```bash
+   python plotTool.py
+   ```
+
+---
 
 ## Usage
-### Command-line Arguments
-You can run the script with various arguments. The basic syntax is:
 
+### GUI Mode
+
+Run the script without arguments to launch the GUI:
 ```bash
-python script_name.py <file_path1> <file_path2> ... [options]
+python plotTool.py
 ```
 
-### Arguments
-- **file_args:** List of input file paths followed by options for each file. Each file can be optionally followed by:
+### Command-Line Mode
 
-    - `-label <label>`: Specify a label for the file (default: directory name).
-    - `-sh <shift_value>`: Shift the data by a specified value (default: 0).
-    - `-sc <scale_value>`: Scale the data by a specified factor (default: 1).
-- **-plot_type, -pt:** Type of plot to generate. Options are:
-
-    - `motion`: Data related to motion (default).
-    - `flux`: Data related to flux.
-    - `force`: Data related to forces.
-    - `interfaceHeight`: Data related to interface height.
-
-- **-save_plot, -sp:** Enable saving the plot as a PNG image (default: disabled).
-
-- **-save_data, -sd:** Enable saving the extracted data to CSV files (default: disabled).
-
-- **-x_min:** Minimum value for the x-axis.
-
-- **-x_max:** Maximum value for the x-axis.
-
-### Example Usage
+Run the script with arguments to process files and save plots or data without launching the GUI:
 ```bash
-python script_name.py -pt force -sp -sd -x_max 100 ./data1/log.solverName -label "Case 1" -sc 0.2 ./data2/log.solverName -label "Case 2" -sh 1 -sc 0.2 
+python plotTool.py file1.txt -label "File 1" -scale 2 -shift 1 -norm_origin -skip_row 3 -usecols 0,1,2 \
+file2.txt -label "File 2" -scale 1 -shift 0 -usecols 0,2 \
+-plot_type general -fig_title "My Plot" -fig_width 6 -fig_height 4 -x_min 0 -x_max 10 -y_min -5 -y_max 5 -save_plot -save_data
 ```
 
-This command will:
+---
 
-- Process the files `log.solverName` located in the `./data1/` and `./data2/` directories.
-- Assign the label "Case 1" and "Case 2" to the files.
-- Apply a shift-up of 1 to the Case 2 and a scale of 0.2 to the both cases.
-- Save the plot as a PNG file.
-- Save the extracted data to CSV files.
-- Generate force-related plots with the x-axis up to 100.
+## Command-Line Arguments
 
-## How It Works
-1. Data Extraction:
+| Argument         | Description                                                     | Default Value |
+|------------------|-----------------------------------------------------------------|---------------|
+| file_args        | List of input files followed by their options                   | None          |
+| `-plot_type`     | Specify the type of plot (`general`, `motion`)                  | `general`     |
+| `-fig_title`     | Specify a title for the figure                                  | None          |
+| `-fig_width`     | Specify the width of the figure in inches                       | 5             |
+| `-fig_height`    | Specify the height of the figure in inches                      | 4             |
+| `-x_axis_title`  | Specify a title for the x-axis                                  | `t`           |
+| `-x_axis_dim`    | Specify a dimension for the x-axis                              | `s`           |
+| `-y_axis_title`  | Specify titles for the y-axes (comma-separated for multiple)    | `Amplitude`   |
+| `-y_axis_dim`    | Specify dimensions for the y-axes (comma-separated)             | `-`           |
+| `-x_min`         | Minimum x-axis value                                            | None          |
+| `-x_max`         | Maximum x-axis value                                            | None          |
+| `-y_min`         | Minimum y-axis value                                            | None          |
+| `-y_max`         | Maximum y-axis value                                            | None          |
+| `-save_plot`     | Save the plot as a PNG image                                    | Disabled      |
+| `-save_data`     | Save the extracted data to CSV files                            | Disabled      |
 
-    - The script reads specific columns from files based on the `fig_type` (motion, flux, force, or interfaceHeight).
-    - Each file is processed to extract time-series data and other relevant variables.
-2. Plotting:
+---
 
-    - A dynamic plot is created, with one subplot per variable.
-    - Each subplot can be labeled, and the x-axis can be customized (min/max).
-    - Shifting and scaling are applied to the data if specified.
-3. Saving Data:
+## GUI Features
 
-    - The script saves extracted data as CSV files, one for each variable in each file.
-4. Saving Plots:
+- **Plot Type Selection**: Choose the type of plot (`general`, `motion`).
+- **Figure Properties**: Set the figure title, width, and height.
+- **Axis Settings**: Configure x-axis and y-axis titles, dimensions, and ranges.
+- **File Selection**: Add files, configure settings (scale, shift, normalization, etc.), and remove files.
 
-    - The plot can be saved as a PNG file, with all the data visualized for comparison.
-## Example Output
-### Plot:
-A dynamic plot showing the data for each variable across all files. The plot will include labels and a legend, and the x-axis and y-axis labels will be set based on the type of data.
+### Buttons
 
-### CSV Data Files:
-The script saves the extracted data in CSV format with columns like `Time` and the variable name (e.g., `x-Force`, `Heave`), depending on the type of data extracted.
+- 👁️ **Plot**: Generate the plot.
+- 💾 **Save Plot**: Save the generated plot as an image.
+- 📊 **Save Data**: Save the extracted data to a file.
 
-## Customization
-### Plot Customization:
-You can control the appearance of the plot by modifying the following variables:
+---
 
-- `colors`: Set the colors for the plot lines.
-- `linestyles`: Set the line styles (solid, dashed, etc.).
-- `x_min` and `x_max`: Adjust the x-axis range for the plot.
-### Data Processing:
-The script allows for shift and scale adjustments, which can be useful if the data needs to be adjusted before plotting.
+## File Settings
 
-### Adding More Data Types:
-If you want to add more data extraction functions or customize the figures, you can modify the select_fig function to include new data types and define corresponding figures.
+For each file, you can configure the following:
+
+- **Label**: A custom label for the file.
+- **Scale**: A scaling factor for the data.
+- **Shift**: A shift value to add to the data.
+- **Normalize**: Normalize the data to its origin.
+- **Skip Rows**: Number of rows to skip at the start of the file.
+- **Used Columns**: Specify the column indices to use (comma-separated).
+
+---
+
+## Output
+
+### Plots
+
+- Saved as PNG images in the current directory or in `./individual_figures`.
+
+### Extracted Data
+
+- Saved as CSV files in the `./extracted_data` directory.
+
+**Example Output**:
+```
+Time,Amplitude_File1,Time,Amplitude_File2
+0.0,1.0,0.0,2.0
+1.0,1.5,1.0,2.5
+2.0,2.0,2.0,3.0
+```
+
+---
 
 ## Contributing
-Feel free to fork the repository, create a branch, and submit a pull request with new features, bug fixes, or improvements. Please ensure that your changes are well-documented and tested.
+
+Contributions are welcome! Feel free to open issues or submit pull requests.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Acknowledgments
+
+- [Matplotlib](https://matplotlib.org/) for plotting.
+- [PyQt5](https://riverbankcomputing.com/software/pyqt/) for the GUI framework.
+- [NumPy](https://numpy.org/) for numerical computations.
+
+---
+
+### Notes
+
+1. Replace `your-username` in the repository URL with your GitHub username.
+2. Add an example plot image (`example_plot.png`) to your repository to display example output.
+3. Update the license section if using a different license.
