@@ -20,18 +20,18 @@ This Python script is designed to read, process, and visualize simulation data f
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/plot-tools.git
+   git clone https://github.com/Rezi47/plotTools/tree/main
    cd plot-tools
    ```
 
 2. Install the required dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install numpy==1.23.5 matplotlib==3.7.1 PyQt5==5.15.9
    ```
 
 3. Run the tool:
    ```bash
-   python plotTool.py
+   python plotTools.py
    ```
 
 ---
@@ -42,16 +42,17 @@ This Python script is designed to read, process, and visualize simulation data f
 
 Run the script without arguments to launch the GUI:
 ```bash
-python plotTool.py
+python plotTools.py
 ```
 
 ### Command-Line Mode
 
 Run the script with arguments to process files and save plots or data without launching the GUI:
 ```bash
-python plotTool.py file1.txt -label "File 1" -scale 2 -shift 1 -norm_origin -skip_row 3 -usecols 0,1,2 \
-file2.txt -label "File 2" -scale 1 -shift 0 -usecols 0,2 \
--plot_type general -fig_title "My Plot" -fig_width 6 -fig_height 4 -x_min 0 -x_max 10 -y_min -5 -y_max 5 -save_plot -save_data
+python plotTools.py -pt general -ft "My Plot" -fw 6 -ft 4 -xmi 0 -xma 10 -ymi -5 -yma 5 -sp -sd \ 
+file1.txt -label "File 1" -scale 2 -shift 1 -norm_origin -skip_row 3 -usecols 0,1,2 \
+file2.txt -label "File 2" -scale 1 -shift 0 -usecols 0,2
+
 ```
 
 ---
@@ -83,7 +84,7 @@ file2.txt -label "File 2" -scale 1 -shift 0 -usecols 0,2 \
 - **Plot Type Selection**: Choose the type of plot (`general`, `motion`).
 - **Figure Properties**: Set the figure title, width, and height.
 - **Axis Settings**: Configure x-axis and y-axis titles, dimensions, and ranges.
-- **File Selection**: Add files, configure settings (scale, shift, normalization, etc.), and remove files.
+- **File Selection**: Add files, configure settings (scale, shift, normalization, etc.).
 
 ### Buttons
 
@@ -116,14 +117,6 @@ For each file, you can configure the following:
 
 - Saved as CSV files in the `./extracted_data` directory.
 
-**Example Output**:
-```
-Time,Amplitude_File1,Time,Amplitude_File2
-0.0,1.0,0.0,2.0
-1.0,1.5,1.0,2.5
-2.0,2.0,2.0,3.0
-```
-
 ---
 
 ## Contributing
@@ -131,23 +124,3 @@ Time,Amplitude_File1,Time,Amplitude_File2
 Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ---
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- [Matplotlib](https://matplotlib.org/) for plotting.
-- [PyQt5](https://riverbankcomputing.com/software/pyqt/) for the GUI framework.
-- [NumPy](https://numpy.org/) for numerical computations.
-
----
-
-### Notes
-
-1. Replace `your-username` in the repository URL with your GitHub username.
-2. Add an example plot image (`example_plot.png`) to your repository to display example output.
-3. Update the license section if using a different license.
