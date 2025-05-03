@@ -263,10 +263,10 @@ def interactive_plot_type_selection_QT(
             y_min,
             y_max,
             fig_title,
-            axis_title,
-            axis_dim,
             fig_width,
             fig_height,
+            axis_title,
+            axis_dim,
             x_axis_title,
             x_axis_dim
         )
@@ -661,7 +661,7 @@ class PlotCanvas(FigureCanvas):
         self.mpl_connect("motion_notify_event", self.on_motion)
         self.mpl_connect("button_release_event", self.on_release)
 
-    def plot(self, parsed_data, labels, x_min, x_max, y_min, y_max, fig_title, fig_width, fig_height, axis_title, axis_dim, x_axis_title=None, x_axis_dim=None):
+    def plot(self, parsed_data, labels, x_min, x_max, y_min, y_max, fig_title, fig_width, fig_height, axis_title, axis_dim, x_axis_title, x_axis_dim):
         self.fig.clear()  # Clear the main figure for new plots
         colors = ['b', 'r', 'g', 'c', 'm', 'y']
         linestyles = ['-', '--', ':', '-.']
